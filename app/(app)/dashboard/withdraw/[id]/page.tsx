@@ -218,7 +218,7 @@ export default async function WithdrawalPage({
                 </div>
               )}
               <div className="print:hidden">
-                <PrintButton />
+                <PrintButton kind="withdrawal" id={w._id} />
               </div>
             </Panel>
           )}

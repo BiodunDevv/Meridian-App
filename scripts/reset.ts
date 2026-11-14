@@ -1,12 +1,12 @@
 /**
- * Fresh start. `npm run seed` WIPES the whole database (users, deposits,
+ * Fresh start. `npm run reset` WIPES the whole database (users, deposits,
  * investments, ledger, messages, everything) and recreates:
  *   - the admin account from ADMIN_EMAIL / ADMIN_PASSWORD
  *   - the three plans from content/site.ts
  *   - the popular asset catalogue (no wallet addresses)
  *
  * Because that is irreversible, it asks you to type the database name first.
- * Skip the prompt with:  npm run seed -- --yes
+ * Skip the prompt with:  npm run reset -- --yes
  */
 import { createInterface } from "node:readline/promises";
 

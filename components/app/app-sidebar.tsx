@@ -9,6 +9,7 @@ import {
   Layers,
   LayoutDashboard,
   LifeBuoy,
+  LogOut,
   type LucideIcon,
   Mail,
   MessageSquare,
@@ -22,6 +23,7 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { logoutAction } from "@/app/actions/auth";
 import {
   Sidebar,
   SidebarContent,
@@ -190,8 +192,22 @@ export function AppSidebar({
           </SidebarGroup>
         ))}
       </SidebarContent>
-      <SidebarFooter className="text-muted-foreground px-3 pb-3 text-[11px] leading-snug group-data-[collapsible=icon]:hidden">
-        Capital at risk. Projected returns are illustrative.
+      <SidebarFooter className="gap-2 px-2 pb-3">
+        <form action={logoutAction}>
+          <SidebarMenuButton
+            type="submit"
+            tooltip="Log out"
+            className="text-muted-foreground hover:text-destructive-foreground"
+          >
+            <LogOut />
+            <span>Log out</span>
+          </SidebarMenuButton>
+        </form>
+        {variant === "investor" && (
+          <p className="text-muted-foreground px-2 text-[11px] leading-snug group-data-[collapsible=icon]:hidden">
+            Capital at risk. Projected returns are illustrative.
+          </p>
+        )}
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

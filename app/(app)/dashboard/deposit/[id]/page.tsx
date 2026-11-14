@@ -329,7 +329,7 @@ export default async function PaymentPage({
                 <Button asChild variant="outline" size="sm">
                   <Link href="/dashboard/transactions">View transactions</Link>
                 </Button>
-                <PrintButton />
+                <PrintButton kind="deposit" id={d._id} />
               </div>
             </Panel>
           )}

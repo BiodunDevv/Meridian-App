@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { reviewKycAction, setUserStatusAction } from "@/app/actions/admin";
 import { SubmitButton } from "@/components/app/form";
 import { IconInput } from "@/components/app/icon-input";
+import { KycDocuments } from "@/components/app/kyc-documents";
 import { MobileDetails } from "@/components/app/mobile-details";
 import { Pagination } from "@/components/app/pagination";
 import { TableToolbar } from "@/components/app/table-toolbar";
@@ -82,6 +83,7 @@ export default async function AdminUsers({
       address: string;
       idType: string;
       idNumberEnc?: string;
+      documents?: { kind: string }[];
     }[]
   ).map((k) => ({ ...plain(k), idMasked: fullIdNumber(k.idNumberEnc) }));
   // Showing a full ID number is sensitive, so every view is recorded in the audit log.
@@ -130,6 +132,9 @@ export default async function AdminUsers({
                     {k.idMasked}
                   </p>
                 </div>
+                {k.userId && (
+                  <KycDocuments userId={k.userId._id} documents={k.documents} />
+                )}
                 <div className="flex flex-wrap gap-2">
                   <ToastForm action={reviewKycAction}>
                     <input type="hidden" name="id" value={k._id} />

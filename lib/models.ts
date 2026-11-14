@@ -298,6 +298,16 @@ const kycSchema = new Schema(
     idType: String,
     idNumberEnc: String,
     idLast4: String,
+    /** Uploaded ID images, stored privately at the file host. Never public URLs. */
+    documents: [
+      {
+        _id: false,
+        kind: { type: String, enum: ["front", "back", "selfie"] },
+        publicId: String,
+        format: String,
+        bytes: Number,
+      },
+    ],
     status: {
       type: String,
       enum: ["pending", "approved", "rejected"],

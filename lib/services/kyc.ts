@@ -2,6 +2,7 @@ import { decrypt, encrypt, maskId } from "../crypto";
 import { connectDb } from "../db";
 import { emails } from "../email/templates";
 import { Kyc, User } from "../models";
+import { deleteDocument, type StoredDoc } from "../storage/cloudinary";
 import { alertAdmins, audit, notify } from "./notify";
 
 type Actor = { id: string; email: string };
@@ -28,23 +29,31 @@ export async function submitKyc(
     idType: string;
     idNumber: string;
   },
+  docs: Partial<Record<"front" | "back" | "selfie", StoredDoc>> = {},
 ) {
   await connectDb();
   const existing = await Kyc.findOne({ userId });
   if (existing?.status === "approved")
     throw new Error("Your identity is already verified.");
   const { idNumber, ...rest } = d;
+  const documents = Object.entries(docs).map(([kind, v]) => ({ kind, ...v }));
   await Kyc.findOneAndUpdate(
     { userId },
     {
       ...rest,
       idNumberEnc: encrypt(idNumber),
       idLast4: idNumber.slice(-4),
+      ...(documents.length ? { documents } : {}),
       status: "pending",
       reason: undefined,
     },
     { upsert: true },
   );
+  // Files from an earlier, rejected attempt that were replaced are removed from storage.
+  const keep = new Set(documents.map((x) => x.publicId));
+  for (const old of (existing?.documents ?? []) as { publicId: string }[])
+    if (documents.length && !keep.has(old.publicId))
+      await deleteDocument(old.publicId);
   const u = await User.findById(userId).select("email");
   await notify(
     userId,

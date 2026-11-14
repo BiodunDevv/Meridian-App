@@ -13,6 +13,7 @@ import {
 } from "@/app/actions/admin";
 import { ActionForm, SubmitButton } from "@/components/app/form";
 import { IconInput } from "@/components/app/icon-input";
+import { KycDocuments } from "@/components/app/kyc-documents";
 import { Pagination } from "@/components/app/pagination";
 import { TableToolbar } from "@/components/app/table-toolbar";
 import { ConfirmAction, ToastForm } from "@/components/app/toast-form";
@@ -289,6 +290,9 @@ export default async function UserDetail({
                   </div>
                 ))}
               </dl>
+              <div className="border-t pt-4">
+                <KycDocuments userId={id} documents={k.documents} />
+              </div>
               {k.status === "pending" && (
                 <div className="flex flex-wrap gap-2 border-t pt-4">
                   <ToastForm action={reviewKycAction}>

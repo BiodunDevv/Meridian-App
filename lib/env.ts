@@ -20,6 +20,10 @@ const schema = z.object({
   VAPID_SUBJECT: z.string().default("mailto:admin@example.com"),
   BREVO_WEBHOOK_SECRET: z.string().default(""),
   ADMIN_PASSWORD: z.string().default(""),
+  /** Cloudinary: private storage for identity documents. */
+  CLOUDINARY_CLOUD_NAME: z.string().default(""),
+  CLOUDINARY_API_KEY: z.string().default(""),
+  CLOUDINARY_API_SECRET: z.string().default(""),
   /** Online payments (NOWPayments). Leave empty to keep the manual deposit review flow. */
   NOWPAYMENTS_API_KEY: z.string().default(""),
   NOWPAYMENTS_IPN_SECRET: z.string().default(""),

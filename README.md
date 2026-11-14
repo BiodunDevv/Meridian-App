@@ -7,7 +7,8 @@ Single-page marketing site for **Meridian**, an investment platform. Built on th
 ```bash
 npm install
 cp .env.example .env.local   # then fill it in (see below)
-npm run seed                 # WIPES the database, then recreates admin, plans and assets
+npm run seed                 # creates or updates the admin account only (safe, deletes nothing)
+npm run reset                # WIPES the database, then recreates admin, plans and assets
 npm run dev                  # http://localhost:3000
 npm run build && npm run start
 npm run lint
@@ -26,14 +27,14 @@ npm run test:email -- you@example.com   # sends a Brevo test email
 
 Copy `.env.example` to `.env.local`.
 
-| Variable | Purpose |
-| --- | --- |
-| `NEXT_PUBLIC_SITE_URL` | Public URL of the site (canonical URL, emailed links). |
-| `NEXT_PUBLIC_APP_URL` | Leave empty (the app lives in this project). Set only if the app is on another domain. |
-| `MONGODB_URI` | MongoDB connection string. Use Atlas or a replica set so money movements run in transactions. Until it is set, the app builds and shows a "Database not connected" screen. |
-| `AUTH_SECRET`, `ENCRYPTION_KEY`, `CRON_SECRET` | Generated secrets. `ENCRYPTION_KEY` must be 32 random bytes, base64 (`openssl rand -base64 32`). |
-| `BREVO_API_KEY`, `BREVO_SENDER_EMAIL`, `BREVO_SENDER_NAME` | Transactional email through Brevo. The sender address must be a verified sender in your Brevo account. |
-| `ADMIN_EMAIL`, `ADMIN_PASSWORD` | First admin, created by `npm run seed`. |
+| Variable                                                   | Purpose                                                                                                                                                                    |
+| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_SITE_URL`                                     | Public URL of the site (canonical URL, emailed links).                                                                                                                     |
+| `NEXT_PUBLIC_APP_URL`                                      | Leave empty (the app lives in this project). Set only if the app is on another domain.                                                                                     |
+| `MONGODB_URI`                                              | MongoDB connection string. Use Atlas or a replica set so money movements run in transactions. Until it is set, the app builds and shows a "Database not connected" screen. |
+| `AUTH_SECRET`, `ENCRYPTION_KEY`, `CRON_SECRET`             | Generated secrets. `ENCRYPTION_KEY` must be 32 random bytes, base64 (`openssl rand -base64 32`).                                                                           |
+| `BREVO_API_KEY`, `BREVO_SENDER_EMAIL`, `BREVO_SENDER_NAME` | Transactional email through Brevo. The sender address must be a verified sender in your Brevo account.                                                                     |
+| `ADMIN_EMAIL`, `ADMIN_PASSWORD`                            | The admin account, created or updated by `npm run seed`.                                                                                                                   |
 
 ## How money works
 
@@ -81,7 +82,7 @@ Before going live: real deposits, returns and withdrawals need legal review, the
 
 ## Resetting to a clean slate
 
-`npm run seed` deletes everything in the configured database (users, sessions, deposits, investments, ledger, notifications, messages, audit log) and recreates the admin account from `ADMIN_EMAIL` / `ADMIN_PASSWORD`, the three plans and the asset catalogue. It asks you to type the database name before it deletes anything. Use `npm run seed -- --yes` to skip the prompt in scripts. Never run it against a live database you want to keep.
+`npm run seed` only creates or updates the admin account from `ADMIN_EMAIL` / `ADMIN_PASSWORD` (password reset, made admin, unsuspended, sessions ended). It never deletes data. Add `-- --reset-2fa` if the admin lost their authenticator app. `npm run reset` is the destructive one: it deletes everything in the configured database and recreates the admin, plans and asset catalogue, after asking you to type the database name (`npm run reset -- --yes` skips the prompt). Never run `reset` against a live database you want to keep.
 
 ## Support, referrals, push, email reliability
 
@@ -103,7 +104,7 @@ app keeps the manual review flow, so nothing breaks.
    `NOWPAYMENTS_API_KEY` and `NOWPAYMENTS_IPN_SECRET`. Use `NOWPAYMENTS_SANDBOX=true` with a sandbox account first.
 2. In NOWPayments set the IPN callback URL to `https://YOUR-SITE/api/webhooks/payments` (shown in Admin > Settings).
 3. **Deposits:** each deposit gets its own address and amount from the provider. The webhook (and a re-check every
-   time the user opens the payment, plus `/api/cron/payments` every 10 minutes) moves it to *Confirming* and then
+   time the user opens the payment, plus `/api/cron/payments` every 10 minutes) moves it to _Confirming_ and then
    credits the balance once, even if callbacks repeat or arrive late. Underpaid deposits wait for an admin.
 4. **Withdrawals:** add `NOWPAYMENTS_EMAIL` and `NOWPAYMENTS_PASSWORD` for the account holding the payout balance, and
    `NOWPAYMENTS_2FA_SECRET` so payouts can be confirmed automatically. A withdrawal is paid automatically only when it

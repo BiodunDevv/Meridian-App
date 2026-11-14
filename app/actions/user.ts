@@ -9,6 +9,7 @@ import { withIdempotency } from "@/lib/auth/idempotency";
 import { rateLimit } from "@/lib/auth/rate-limit";
 import { currentTokenHash } from "@/lib/auth/session";
 import { checkAddress } from "@/lib/coins";
+import { COUNTRY_NAMES } from "@/lib/countries";
 import { connectDb } from "@/lib/db";
 import { Notification, PushSubscription, User } from "@/lib/models";
 import { formatUsd } from "@/lib/money";
@@ -35,6 +36,13 @@ import {
   validateUsernameFormat,
 } from "@/lib/services/username";
 import { requestWithdrawal } from "@/lib/services/withdrawals";
+import {
+  cloudinaryConfigured,
+  createUploadTicket,
+  ownsDocument,
+  type StoredDoc,
+  verifyDocument,
+} from "@/lib/storage/cloudinary";
 import {
   type ActionState,
   firstError,
@@ -229,7 +237,13 @@ export async function kycAction(
       dateOfBirth: z
         .string()
         .regex(/^\d{4}-\d{2}-\d{2}$/, "Enter your date of birth."),
-      country: z.string().trim().min(2, "Enter your country.").max(80),
+      country: z
+        .string()
+        .trim()
+        .refine(
+          (v) => COUNTRY_NAMES.has(v),
+          "Choose your country from the list.",
+        ),
       address: z.string().trim().min(5, "Enter your address.").max(300),
       idType: z.string().min(1, "Choose an ID type."),
       idNumber: z.string().trim().min(4, "Enter your ID number.").max(60),
@@ -248,7 +262,35 @@ export async function kycAction(
     );
   if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
   try {
-    await submitKyc(user.id, parsed.data);
+    // Document images were uploaded straight to private storage. Check each one is really this user's.
+    const docs: Partial<Record<"front" | "back" | "selfie", StoredDoc>> = {};
+    if (cloudinaryConfigured()) {
+      const ids = {
+        front: str(f, "docFront"),
+        back: str(f, "docBack"),
+        selfie: str(f, "docSelfie"),
+      };
+      const needBack = parsed.data.idType !== "passport";
+      if (!ids.front)
+        return { ok: false, error: "Upload the front of your ID." };
+      if (needBack && !ids.back)
+        return { ok: false, error: "Upload the back of your ID." };
+      if (!ids.selfie)
+        return { ok: false, error: "Upload a selfie holding your ID." };
+      for (const [kind, id] of Object.entries(ids) as [
+        "front" | "back" | "selfie",
+        string,
+      ][]) {
+        if (!id || (kind === "back" && !needBack)) continue;
+        if (!ownsDocument(user.id, id))
+          return {
+            ok: false,
+            error: "A document upload is not valid. Please upload it again.",
+          };
+        docs[kind] = await verifyDocument(id);
+      }
+    }
+    await submitKyc(user.id, parsed.data, docs);
   } catch (e) {
     return fail(e);
   }
@@ -503,4 +545,22 @@ export async function removePushSubscriptionAction(
   await connectDb();
   await PushSubscription.deleteOne({ endpoint, userId: user.id });
   return { ok: true, message: "Notifications are off for this device." };
+}
+
+/** A one-time ticket so the browser can upload one ID image straight to private storage. */
+export async function kycUploadTicketAction(kind: string) {
+  const user = await requireUser();
+  if (!cloudinaryConfigured())
+    return {
+      ok: false as const,
+      error: "Document upload is not available right now.",
+    };
+  if (!["front", "back", "selfie"].includes(kind))
+    return { ok: false as const, error: "Unknown document." };
+  if (!(await rateLimit(`kyc-ticket:${user.id}`, 30, 3600)))
+    return {
+      ok: false as const,
+      error: "Too many uploads. Please wait a little.",
+    };
+  return { ok: true as const, ticket: createUploadTicket(user.id, kind) };
 }
