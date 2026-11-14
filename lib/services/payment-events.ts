@@ -1,4 +1,5 @@
 import { connectDb } from "../db";
+import { getEnv } from "../env";
 import { Deposit, User, Withdrawal } from "../models";
 import { formatUsd } from "../money";
 import {
@@ -35,9 +36,35 @@ export async function applyPaymentStatus(
         { status: "pending", submittedAt: before.submittedAt ?? new Date() },
       );
       break;
-    case "finished":
+    case "finished": {
+      // Live mode: only credit when the provider reports the full amount arrived. The sandbox reports 0 paid.
+      const sandbox = getEnv().NOWPAYMENTS_SANDBOX === "true";
+      const short =
+        !sandbox &&
+        info?.pay_amount !== undefined &&
+        (info.actually_paid ?? 0) < info.pay_amount * 0.99;
+      if (short) {
+        await Deposit.updateOne(
+          { _id: id },
+          { providerStatus: "partially_paid" },
+        );
+        await alertAdmins(
+          "Deposit marked finished but underpaid",
+          [
+            ["Reference", before.reference ?? ""],
+            ["Requested", formatUsd(before.amountCents)],
+            [
+              "Received",
+              `${info.actually_paid ?? 0} of ${info.pay_amount} ${before.asset}`,
+            ],
+          ],
+          `/admin/deposits/${id}`,
+        );
+        break;
+      }
       await settleDeposit(id);
       break;
+    }
     case "partially_paid": {
       await Deposit.updateOne(
         { _id: id, status: { $in: ["awaiting", "expired"] } },
