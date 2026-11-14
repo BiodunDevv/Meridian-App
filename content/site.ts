@@ -21,7 +21,7 @@ export const appLinks = {
 };
 
 export const brand = {
-  name: "Apexvest",
+  name: "Meridian",
   tagline: "Invest smarter. See every move.",
   year: 2026,
 };
@@ -29,7 +29,7 @@ export const brand = {
 export const seo = {
   title: `${brand.name} | ${brand.tagline}`,
   description:
-    "Apexvest is an investment platform: fund with crypto, choose a plan and track your portfolio, deposits and withdrawals in one dashboard.",
+    "Meridian is an investment platform: fund with crypto, choose a plan and track your portfolio, deposits and withdrawals in one dashboard.",
   ogAlt: `${brand.name}: ${brand.tagline}`,
 };
 
@@ -66,7 +66,7 @@ export const hero = {
   titleLine1: "Invest smarter.",
   titleLine2: "See every move.",
   description:
-    "Apexvest lets you fund your balance with crypto, choose an investment plan, and follow your deposits, growth and withdrawals in one clean dashboard.",
+    "Meridian lets you fund your balance with crypto, choose an investment plan, and follow your deposits, growth and withdrawals in one clean dashboard.",
   emailLabel: "Email address",
   emailPlaceholder: "Email address",
   emailError: "Enter a valid email address, for example name@example.com.",
@@ -354,8 +354,8 @@ export const faq = {
   title: "Questions, answered plainly",
   items: [
     {
-      q: "What is Apexvest?",
-      a: "Apexvest is an investment platform. You fund your balance with crypto, choose a fixed-term plan and follow your deposits, growth and withdrawals in one dashboard.",
+      q: "What is Meridian?",
+      a: "Meridian is an investment platform. You fund your balance with crypto, choose a fixed-term plan and follow your deposits, growth and withdrawals in one dashboard.",
     },
     {
       q: "How do deposits work?",
@@ -389,7 +389,7 @@ export const faq = {
 };
 
 export const cta = {
-  title: "Ready to see Apexvest in action?",
+  title: "Ready to see Meridian in action?",
   description:
     "Create a free account and explore the investor dashboard in minutes.",
   primary: "Create account",
@@ -441,12 +441,12 @@ export const legal = {
     terms: {
       title: "Terms of Service",
       intro:
-        "These terms govern your use of Apexvest. Please read them carefully before creating an account.",
+        "These terms govern your use of Meridian. Please read them carefully before creating an account.",
       sections: [
         {
           heading: "1. Acceptance of these terms",
           body: [
-            "By creating an account or using Apexvest you agree to these Terms of Service, our Privacy Policy and our Risk Disclosure. If you do not agree, do not use the service.",
+            "By creating an account or using Meridian you agree to these Terms of Service, our Privacy Policy and our Risk Disclosure. If you do not agree, do not use the service.",
           ],
         },
         {
@@ -457,9 +457,9 @@ export const legal = {
           ],
         },
         {
-          heading: "3. What Apexvest provides",
+          heading: "3. What Meridian provides",
           body: [
-            "Apexvest lets you fund a balance with supported cryptocurrency, choose an investment plan with a fixed term, and follow your deposits, plan progress and withdrawals in one dashboard. Supported assets, networks and plans are set by us and may change.",
+            "Meridian lets you fund a balance with supported cryptocurrency, choose an investment plan with a fixed term, and follow your deposits, plan progress and withdrawals in one dashboard. Supported assets, networks and plans are set by us and may change.",
           ],
         },
         {
@@ -485,7 +485,7 @@ export const legal = {
         {
           heading: "7. Acceptable use",
           body: [
-            "You agree not to use Apexvest for unlawful activity, money laundering, fraud, or to interfere with the service or other users. You must not attempt to access accounts, systems or data that are not yours.",
+            "You agree not to use Meridian for unlawful activity, money laundering, fraud, or to interfere with the service or other users. You must not attempt to access accounts, systems or data that are not yours.",
           ],
         },
         {
@@ -497,25 +497,25 @@ export const legal = {
         {
           heading: "9. Risk and no advice",
           body: [
-            "Investing involves risk, including possible loss of capital. Nothing on Apexvest is financial, investment, legal or tax advice. You are responsible for your own decisions and for any taxes that apply to you.",
+            "Investing involves risk, including possible loss of capital. Nothing on Meridian is financial, investment, legal or tax advice. You are responsible for your own decisions and for any taxes that apply to you.",
           ],
         },
         {
           heading: "10. Limitation of liability",
           body: [
-            "To the fullest extent permitted by law, Apexvest is not liable for indirect or consequential losses, for losses caused by blockchain network events, third-party outages or events outside our reasonable control, or for losses arising from information or addresses you provide incorrectly. Nothing in these terms limits liability that cannot be limited by law.",
+            "To the fullest extent permitted by law, Meridian is not liable for indirect or consequential losses, for losses caused by blockchain network events, third-party outages or events outside our reasonable control, or for losses arising from information or addresses you provide incorrectly. Nothing in these terms limits liability that cannot be limited by law.",
           ],
         },
         {
           heading: "11. Changes to the service and these terms",
           body: [
-            "We may update the service and these terms from time to time. When changes are material we will notify you in the app or by email. Continuing to use Apexvest after a change takes effect means you accept the updated terms.",
+            "We may update the service and these terms from time to time. When changes are material we will notify you in the app or by email. Continuing to use Meridian after a change takes effect means you accept the updated terms.",
           ],
         },
         {
           heading: "12. Governing law and contact",
           body: [
-            "These terms are governed by the laws of the jurisdiction in which Apexvest is operated, and disputes are subject to the courts of that jurisdiction unless the law requires otherwise. If you have a question about these terms, contact us through the support channel listed in your account.",
+            "These terms are governed by the laws of the jurisdiction in which Meridian is operated, and disputes are subject to the courts of that jurisdiction unless the law requires otherwise. If you have a question about these terms, contact us through the support channel listed in your account.",
           ],
         },
       ] satisfies LegalSection[],
@@ -523,7 +523,7 @@ export const legal = {
     privacy: {
       title: "Privacy Policy",
       intro:
-        "This policy explains what personal information Apexvest collects, why we collect it and the choices you have.",
+        "This policy explains what personal information Meridian collects, why we collect it and the choices you have.",
       sections: [
         {
           heading: "1. Information we collect",
@@ -550,13 +550,13 @@ export const legal = {
         {
           heading: "4. Cookies and analytics",
           body: [
-            "Apexvest uses a strictly necessary session cookie to keep you signed in. We do not use advertising cookies or third-party analytics on the public pages.",
+            "Meridian uses a strictly necessary session cookie to keep you signed in. We do not use advertising cookies or third-party analytics on the public pages.",
           ],
         },
         {
           heading: "5. Sharing your information",
           body: [
-            "We do not sell your personal information. We share it only with service providers that help us run Apexvest (for example hosting, database and email delivery), with authorities where the law requires it, and where needed to protect our users and platform. Providers may only use your information to provide their service to us.",
+            "We do not sell your personal information. We share it only with service providers that help us run Meridian (for example hosting, database and email delivery), with authorities where the law requires it, and where needed to protect our users and platform. Providers may only use your information to provide their service to us.",
           ],
         },
         {
@@ -580,7 +580,7 @@ export const legal = {
         {
           heading: "9. Children",
           body: [
-            "Apexvest is not intended for anyone under 18 and we do not knowingly collect information from children.",
+            "Meridian is not intended for anyone under 18 and we do not knowingly collect information from children.",
           ],
         },
         {
@@ -628,13 +628,13 @@ export const legal = {
         {
           heading: "6. Platform and counterparty risk",
           body: [
-            "Using any online platform involves risks including technical failure, cyber attack, errors and the failure of third parties we rely on. Holdings on Apexvest may not be covered by any deposit protection or compensation scheme.",
+            "Using any online platform involves risks including technical failure, cyber attack, errors and the failure of third parties we rely on. Holdings on Meridian may not be covered by any deposit protection or compensation scheme.",
           ],
         },
         {
           heading: "7. Regulatory and tax",
           body: [
-            "Rules about crypto assets and investment products differ by country and can change. You are responsible for knowing whether you may use Apexvest where you live and for reporting and paying any taxes that apply.",
+            "Rules about crypto assets and investment products differ by country and can change. You are responsible for knowing whether you may use Meridian where you live and for reporting and paying any taxes that apply.",
           ],
         },
         {

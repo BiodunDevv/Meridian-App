@@ -23,7 +23,7 @@ export async function GET(
   return new NextResponse(csv, {
     headers: {
       "content-type": "text/csv; charset=utf-8",
-      "content-disposition": `attachment; filename="apexvest-${resource}-${stamp}.csv"`,
+      "content-disposition": `attachment; filename="meridian-${resource}-${stamp}.csv"`,
       "cache-control": "no-store",
     },
   });

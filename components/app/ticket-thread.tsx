@@ -64,7 +64,7 @@ export function TicketThread({
                     ? "You (support)"
                     : "Customer"
                   : m.authorRole === "admin"
-                    ? "Apexvest support"
+                    ? "Meridian support"
                     : "You"}
               </p>
               <p className="whitespace-pre-wrap">{m.body}</p>

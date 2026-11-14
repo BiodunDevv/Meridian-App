@@ -1,14 +1,14 @@
-# Apexvest Landing Page: PRD
+# Meridian Landing Page: PRD
 
 Nov 12, 2026 · @Muhammed Abiodun
 
 ## Overview and goals
 
-Apexvest needs one marketing page that explains the platform in under a minute and sends visitors to create an account or log in. It is the public front door to the investor and admin dashboards, and it must look like a Launch UI site: light, blue-accented, spacious and typographically bold.
+Meridian needs one marketing page that explains the platform in under a minute and sends visitors to create an account or log in. It is the public front door to the investor and admin dashboards, and it must look like a Launch UI site: light, blue-accented, spacious and typographically bold.
 
 **Goals**
 
-1. Explain what Apexvest does on the first screen: fund with crypto, pick a plan, track growth.
+1. Explain what Meridian does on the first screen: fund with crypto, pick a plan, track growth.
 2. Convert visitors. The primary action is "Get Started" (email, then registration); the secondary action is "Log in".
 3. Build trust honestly by showing real platform capabilities (MFA, KYC, audit trail) and stating plainly that this is a demo with simulated funds.
 4. Reuse Launch UI components so the page is fast to build and easy to restyle.
@@ -20,12 +20,12 @@ Apexvest needs one marketing page that explains the platform in under a minute a
 | Lighthouse on mobile: Performance / Accessibility / Best Practices / SEO | ≥ 90 / ≥ 95 / ≥ 95 / ≥ 95 |
 | Largest Contentful Paint | < 2.5 s on a 4G connection |
 | Cumulative Layout Shift | < 0.1 |
-| A visitor can say what Apexvest does after reading only the hero | Yes, checked with 3 people |
+| A visitor can say what Meridian does after reading only the hero | Yes, checked with 3 people |
 | Hero email form reaches /register with the email prefilled | Works on mobile and desktop |
 
 ## Product context
 
-Apexvest is an investment platform where people fund an account with cryptocurrency and invest in fixed-term plans. **In its current form it is a demo:** wallet addresses are set by the administrator, deposits are confirmed by hand, balances are credited by an admin, and no payment provider or real market is involved. The landing page must never suggest otherwise.
+Meridian is an investment platform where people fund an account with cryptocurrency and invest in fixed-term plans. **In its current form it is a demo:** wallet addresses are set by the administrator, deposits are confirmed by hand, balances are credited by an admin, and no payment provider or real market is involved. The landing page must never suggest otherwise.
 
 **What the platform does (facts the page may state)**
 
@@ -104,7 +104,7 @@ The page is a single scroll with 13 sections in this order. Use the nearest Laun
 | # | Section | Launch UI block | Job |
 | --- | --- | --- | --- |
 | 1 | Navbar | Navbar | Navigation, Log in, Get Started |
-| 2 | Hero | Hero + Mockup + Glow | Say what Apexvest is; capture the email |
+| 2 | Hero | Hero + Mockup + Glow | Say what Meridian is; capture the email |
 | 3 | Supported assets | Logos | Show which assets can fund a balance |
 | 4 | Features | Items | Six reasons to use the platform |
 | 5 | How it works | Items or Section (numbered) | Four steps from sign-up to withdrawal |
@@ -123,7 +123,7 @@ All copy below is final unless marked otherwise. Keep it in one content file so 
 
 ### 1. Navbar
 
-- Left: logo (a simple peak mark in blue plus the wordmark "Apexvest") and a small outlined pill reading "Demo".
+- Left: logo (a simple peak mark in blue plus the wordmark "Meridian") and a small outlined pill reading "Demo".
 - Centre links: Features, How it works, Plans, Security, FAQ. They scroll smoothly to the section and highlight while it is in view.
 - Right: theme toggle (sun/moon), "Log in" (ghost button), "Get Started" (primary button).
 - Sticky, with a blurred translucent background and a 1px bottom border that appears after scrolling 8 px.
@@ -133,7 +133,7 @@ All copy below is final unless marked otherwise. Keep it in one content file so 
 
 - Badge above the headline: "Demo platform · simulated funds" with an arrow link "See how it works" that scrolls to section 5.
 - H1, two lines: **"Invest smarter."** / **"See every move."**
-- Subheading: "Apexvest lets you fund your balance with crypto, choose an investment plan, and follow your deposits, growth and withdrawals in one clean dashboard."
+- Subheading: "Meridian lets you fund your balance with crypto, choose an investment plan, and follow your deposits, growth and withdrawals in one clean dashboard."
 - Form: email input (placeholder "Email address") and a primary button "Get Started", side by side on desktop and stacked on mobile. Submitting goes to {APP\_URL}/register?email=\<value>. Validate the email on the client and show an inline error.
 - Microcopy below: "Demo environment. Funds are simulated and no real money moves."
 - Secondary text link under it: "Already have an account? Log in".
@@ -220,7 +220,7 @@ Heading: "Questions, answered plainly". An accordion, first item open.
 
 | Question | Answer |
 | --- | --- |
-| Is Apexvest using real money? | No. Apexvest is a demo. Deposits are confirmed manually by an administrator and balances are simulated. Please do not send real cryptocurrency to any address shown in the demo. |
+| Is Meridian using real money? | No. Meridian is a demo. Deposits are confirmed manually by an administrator and balances are simulated. Please do not send real cryptocurrency to any address shown in the demo. |
 | How do deposits work? | Choose an asset and network, then send to the wallet address shown. Tell us once you have paid and an administrator reviews it. When it is confirmed, your balance is credited. |
 | How long does a deposit take? | We aim to confirm deposits within an hour. A person reviews each one, so it can occasionally take longer. |
 | Are returns guaranteed? | No. Returns shown are projected and illustrative. Investing carries risk, including loss of capital. |
@@ -231,12 +231,12 @@ Heading: "Questions, answered plainly". An accordion, first item open.
 
 ### 12. Final call to action
 
-A full-width card with the blue glow. Heading: "Ready to see Apexvest in action?" Subheading: "Create a free demo account and explore the investor dashboard in minutes." Buttons: "Create account" (primary) and "Log in" (outline).
+A full-width card with the blue glow. Heading: "Ready to see Meridian in action?" Subheading: "Create a free demo account and explore the investor dashboard in minutes." Buttons: "Create account" (primary) and "Log in" (outline).
 
 ### 13. Footer
 
 - Columns: **Product** (Features, How it works, Plans, Security, FAQ), **Account** (Log in, Create account), **Legal** (Terms of Service, Privacy Policy, Risk Disclosure).
-- Bottom row: "© 2026 Apexvest. Demo platform with simulated funds." and the theme toggle.
+- Bottom row: "© 2026 Meridian. Demo platform with simulated funds." and the theme toggle.
 - Risk line above the bottom row, exactly: "Investing involves risk, including possible loss of capital. Projected returns are illustrative and not guaranteed. Nothing on this site is financial advice."
 
 ## Trust, risk and compliance wording
@@ -332,8 +332,8 @@ Sources: [Launch UI on GitHub](https://github.com/launch-ui/launch-ui), [Launch 
 
 **SEO**
 
-- Title: "Apexvest | Invest smarter. See every move."
-- Meta description: "Apexvest is a demo investment platform: fund with crypto, choose a plan and track your portfolio, deposits and withdrawals in one dashboard."
+- Title: "Meridian | Invest smarter. See every move."
+- Meta description: "Meridian is a demo investment platform: fund with crypto, choose a plan and track your portfolio, deposits and withdrawals in one dashboard."
 - Open Graph and Twitter card image (1200 by 630) showing the name, the tagline and the blue glow, generated with opengraph-image.tsx.
 - lang="en", canonical URL, sitemap.xml and robots.txt, and WebSite structured data.
 
@@ -371,4 +371,4 @@ The page is done when every box below can be ticked.
 | Is there a logo? | Navbar, favicon and social card | A blue Lucide Mountain icon plus the wordmark |
 | Build the calculator? | Extra build time for a non-essential feature | Skip it in version 1 |
 | Who writes the Terms, Privacy and Risk pages? | The footer links need real targets | Placeholder pages that say they are placeholders |
-| Has the name Apexvest been checked for domain and trademark clashes? | Avoids a rename after launch | Check before buying a domain |
+| Has the name Meridian been checked for domain and trademark clashes? | Avoids a rename after launch | Check before buying a domain |

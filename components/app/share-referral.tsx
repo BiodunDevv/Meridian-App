@@ -46,8 +46,8 @@ export function ShareReferral({ code }: { code: string }) {
             onClick={() =>
               navigator
                 .share({
-                  title: "Join me on Apexvest",
-                  text: "Create your Apexvest account with my link.",
+                  title: "Join me on Meridian",
+                  text: "Create your Meridian account with my link.",
                   url: link,
                 })
                 .catch(() => {})

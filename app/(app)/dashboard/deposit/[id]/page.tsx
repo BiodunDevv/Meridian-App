@@ -24,11 +24,12 @@ import { Panel, StatusBadge } from "@/components/app/ui";
 import { Button } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth/guards";
 import { connectDb } from "@/lib/db";
-import { DEPOSIT_LABEL } from "@/lib/deposit-status";
+import { depositLabel } from "@/lib/deposit-status";
 import { formatCrypto } from "@/lib/format-crypto";
 import { Deposit } from "@/lib/models";
 import { formatDateTime, formatUsd } from "@/lib/money";
 import { expireStale } from "@/lib/services/deposits";
+import { syncDeposit } from "@/lib/services/payment-events";
 import { plain } from "@/lib/services/queries";
 
 export const metadata: Metadata = { title: "Payment" };
@@ -43,6 +44,7 @@ type D = {
   amountCents: number;
   cryptoAmount?: number;
   rate?: number;
+  provider?: string;
   status:
     "awaiting" | "pending" | "approved" | "rejected" | "expired" | "cancelled";
   createdAt: string;
@@ -71,6 +73,8 @@ export default async function PaymentPage({
   const { id } = await params;
   await connectDb();
   await expireStale(user.id);
+  // Ask the payment provider for the latest, so the page is right even before a callback arrives.
+  await syncDeposit(id).catch(() => {});
   const doc = await Deposit.findOne({ _id: id, userId: user.id })
     .lean()
     .catch(() => null);
@@ -119,7 +123,10 @@ export default async function PaymentPage({
         </div>
         <div className="flex items-center gap-2">
           {open && d.expiresAt && <PaymentCountdown expiresAt={d.expiresAt} />}
-          <StatusBadge status={d.status} label={DEPOSIT_LABEL[d.status]} />
+          <StatusBadge
+            status={d.status}
+            label={depositLabel(d.status, d.provider)}
+          />
         </div>
       </div>
 
@@ -201,7 +208,46 @@ export default async function PaymentPage({
             </Panel>
           )}
 
-          {showPay && (
+          {showPay && d.provider && (
+            <Panel>
+              <div className="flex items-start gap-3">
+                <Clock
+                  className="text-brand mt-0.5 size-6 shrink-0"
+                  aria-hidden="true"
+                />
+                <div className="space-y-1">
+                  <h2 className="font-semibold">
+                    We detect your payment automatically
+                  </h2>
+                  <p className="text-muted-foreground text-sm">
+                    There is nothing to submit. As soon as your transfer is seen
+                    on the network, this page shows it and credits your balance
+                    after it is confirmed. You can close this page and come
+                    back.
+                    {expired
+                      ? " If you already sent funds after the window closed, we will still find and credit them."
+                      : ""}
+                  </p>
+                </div>
+              </div>
+              {open && (
+                <ConfirmAction
+                  trigger={
+                    <Button variant="ghost" size="sm" className="self-start">
+                      Cancel payment
+                    </Button>
+                  }
+                  title="Cancel this payment?"
+                  description="Only cancel if you have not sent any funds. You can start a new payment any time."
+                  confirmLabel="Cancel payment"
+                  action={cancelDepositAction}
+                  fields={{ id: d._id }}
+                />
+              )}
+            </Panel>
+          )}
+
+          {showPay && !d.provider && (
             <Panel
               title="Sent it?"
               description="Tell us once the transaction is on its way. Our team then verifies it on the blockchain and credits your balance, usually within the hour."
@@ -241,13 +287,14 @@ export default async function PaymentPage({
                 />
                 <div className="space-y-1">
                   <h2 className="font-semibold">
-                    We are verifying your payment
+                    {d.provider
+                      ? "Your payment was detected"
+                      : "We are verifying your payment"}
                   </h2>
                   <p className="text-muted-foreground text-sm">
-                    Our team is checking the transaction. This usually takes
-                    about an hour, and sometimes longer. This page updates by
-                    itself, and we will email you and notify you in the app as
-                    soon as it is credited.
+                    {d.provider
+                      ? "We are waiting for the network to confirm it. This usually takes a few minutes. This page updates by itself, and we will email you and notify you in the app as soon as it is credited."
+                      : "Our team is checking the transaction. This usually takes about an hour, and sometimes longer. This page updates by itself, and we will email you and notify you in the app as soon as it is credited."}
                   </p>
                   {d.txRef && (
                     <p className="text-muted-foreground font-mono text-xs break-all">
@@ -363,6 +410,7 @@ export default async function PaymentPage({
               createdAt={d.createdAt}
               submittedAt={d.submittedAt}
               reviewedAt={d.reviewedAt}
+              auto={Boolean(d.provider)}
             />
           </Panel>
           <p className="text-muted-foreground flex gap-2 text-xs print:hidden">

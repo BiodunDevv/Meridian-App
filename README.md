@@ -1,6 +1,6 @@
-# Apexvest landing page
+# Meridian landing page
 
-Single-page marketing site for **Apexvest**, an investment platform. Built on the Launch UI template (Next.js App Router, React 19, Tailwind CSS v4, shadcn/ui, lucide-react, next-themes, Inter via `next/font`). The palette is electric blue, elegant gold and dark navy. No paid services, no analytics, no external image hosts.
+Single-page marketing site for **Meridian**, an investment platform. Built on the Launch UI template (Next.js App Router, React 19, Tailwind CSS v4, shadcn/ui, lucide-react, next-themes, Inter via `next/font`). The palette is electric blue, elegant gold and dark navy. No paid services, no analytics, no external image hosts.
 
 ## Install and run
 
@@ -93,3 +93,24 @@ Before going live: real deposits, returns and withdrawals need legal review, the
 - **Email reliability:** every email is logged (Admin > Email log). Failed sends retry with backoff via `GET /api/cron/emails` (`Authorization: Bearer $CRON_SECRET`, hourly in `vercel.json`). In Brevo > Transactional > Settings > Webhooks, add `https://YOUR-DOMAIN/api/webhooks/brevo?token=$BREVO_WEBHOOK_SECRET` for delivered, hard bounce, soft bounce, blocked, invalid, spam and unsubscribed. Hard bounces and complaints suppress the address. Confirm-email and password-reset emails are never stored or retried.
 - **Weak connections:** forms send a one-time key so a retry after a timeout never creates a duplicate deposit, investment, withdrawal or ticket; the app shows an offline banner and pauses save buttons; static assets are cached by the service worker.
 - **Plans:** the landing page reads the live plans from the database and refreshes when an admin edits them. `npm run seed:plans` loads the default lineup without touching users.
+
+## Online payments (automatic deposits and withdrawals)
+
+Meridian can run payments end to end through [NOWPayments](https://nowpayments.io). Without the keys below the
+app keeps the manual review flow, so nothing breaks.
+
+1. Create a NOWPayments account and get an **API key** and an **IPN secret** (Settings > Payments). Put them in
+   `NOWPAYMENTS_API_KEY` and `NOWPAYMENTS_IPN_SECRET`. Use `NOWPAYMENTS_SANDBOX=true` with a sandbox account first.
+2. In NOWPayments set the IPN callback URL to `https://YOUR-SITE/api/webhooks/payments` (shown in Admin > Settings).
+3. **Deposits:** each deposit gets its own address and amount from the provider. The webhook (and a re-check every
+   time the user opens the payment, plus `/api/cron/payments` every 10 minutes) moves it to *Confirming* and then
+   credits the balance once, even if callbacks repeat or arrive late. Underpaid deposits wait for an admin.
+4. **Withdrawals:** add `NOWPAYMENTS_EMAIL` and `NOWPAYMENTS_PASSWORD` for the account holding the payout balance, and
+   `NOWPAYMENTS_2FA_SECRET` so payouts can be confirmed automatically. A withdrawal is paid automatically only when it
+   passes every check: identity verified, per-withdrawal limit, daily limit per user, a smaller limit for a new
+   address, no memo-based coin, and a supported network. Everything else is held in the admin queue with the reason.
+   A payout the provider fails is **not** refunded automatically; it returns to the queue for a person.
+5. Check **Admin > Settings > Online payments** to test the connection and tune the limits. Admin > Payment methods
+   shows which networks are automatic, and lets you set a provider currency code when the guess is wrong.
+
+Test everything in the sandbox before using real funds. Check that your provider allows your type of business.

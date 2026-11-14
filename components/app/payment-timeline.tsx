@@ -12,11 +12,14 @@ export function PaymentTimeline({
   createdAt,
   submittedAt,
   reviewedAt,
+  auto = false,
 }: {
   status: Status;
   createdAt: string;
   submittedAt?: string;
   reviewedAt?: string;
+  /** An online payment: steps are detected and confirmed by the network, not submitted and reviewed. */
+  auto?: boolean;
 }) {
   type S = {
     label: string;
@@ -38,7 +41,7 @@ export function PaymentTimeline({
       state: stopped ? "failed" : status === "awaiting" ? "current" : "done",
     },
     {
-      label: "Payment submitted",
+      label: auto ? "Payment detected" : "Payment submitted",
       sub: submittedAt ? formatDateTime(submittedAt) : undefined,
       state:
         submittedAt || ["pending", "approved", "rejected"].includes(status)
@@ -46,10 +49,12 @@ export function PaymentTimeline({
           : "todo",
     },
     {
-      label: "Verified by our team",
+      label: auto ? "Confirmed on the network" : "Verified by our team",
       sub:
         status === "pending"
-          ? "In progress, usually within the hour"
+          ? auto
+            ? "Waiting for confirmations"
+            : "In progress, usually within the hour"
           : status === "rejected"
             ? "Not confirmed"
             : undefined,

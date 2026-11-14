@@ -29,7 +29,7 @@ import {
 } from "@/lib/admin/resources";
 import { coinLogo } from "@/lib/coins";
 import { connectDb } from "@/lib/db";
-import { DEPOSIT_LABEL } from "@/lib/deposit-status";
+import { depositLabel } from "@/lib/deposit-status";
 import { formatCrypto } from "@/lib/format-crypto";
 import { Deposit } from "@/lib/models";
 import { formatDateTime, formatUsd } from "@/lib/money";
@@ -50,6 +50,7 @@ type Row = {
   submittedAt?: string;
   creditedCents?: number;
   cryptoAmount?: number;
+  provider?: string;
   status: string;
   reason?: string;
 };
@@ -89,7 +90,13 @@ export default async function AdminDeposits({
   // eslint-disable-next-line react-hooks/purity -- server component, evaluated per request
   const since = new Date(Date.now() - 30 * 86_400_000);
   const [pendRaw, hist, credited, unpaid] = await Promise.all([
-    Deposit.find({ status: "pending" })
+    Deposit.find({
+      status: "pending",
+      $or: [
+        { provider: { $exists: false } },
+        { providerStatus: "partially_paid" },
+      ],
+    })
       .populate("userId", "email")
       .sort({ submittedAt: 1, createdAt: 1 })
       .lean(),
@@ -278,7 +285,7 @@ export default async function AdminDeposits({
                   <TableCell data-label="Status">
                     <StatusBadge
                       status={d.status}
-                      label={DEPOSIT_LABEL[d.status]}
+                      label={depositLabel(d.status, d.provider)}
                     />
                   </TableCell>
                   <TableCell data-label="">

@@ -33,7 +33,12 @@ function NetworkFields({
   required,
   symbol,
 }: {
-  defaults?: { network?: string; address?: string; memo?: string };
+  defaults?: {
+    network?: string;
+    address?: string;
+    memo?: string;
+    providerCode?: string;
+  };
   required?: boolean;
   symbol?: string;
 }) {
@@ -58,9 +63,9 @@ function NetworkFields({
       </datalist>
       <TextField
         name="address"
-        label="Wallet address"
-        required={required}
-        placeholder="Paste the receiving address"
+        label="Wallet address (optional with online payments)"
+        required={false}
+        placeholder="Paste your receiving address, or leave empty if the provider creates one"
         defaultValue={defaults?.address}
         autoComplete="off"
         spellCheck={false}
@@ -75,6 +80,15 @@ function NetworkFields({
         }
         defaultValue={defaults?.memo}
         autoComplete="off"
+      />
+      <TextField
+        name="providerCode"
+        label="Payment provider code (optional)"
+        placeholder="e.g. usdttrc20"
+        hint="Only needed if automatic detection does not pick the right currency for this network."
+        defaultValue={defaults?.providerCode}
+        autoComplete="off"
+        spellCheck={false}
       />
     </>
   );
@@ -207,7 +221,12 @@ export function NetworkDialog({
 }: {
   trigger: React.ReactNode;
   symbol: string;
-  network?: { name: string; address: string; memo?: string };
+  network?: {
+    name: string;
+    address: string;
+    memo?: string;
+    providerCode?: string;
+  };
 }) {
   const [open, setOpen] = useState(false);
   return (

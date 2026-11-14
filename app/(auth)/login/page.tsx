@@ -26,10 +26,10 @@ export default async function LoginPage({
   return (
     <AuthLayout
       title="Log in"
-      subtitle="Welcome back to Apexvest."
+      subtitle="Welcome back to Meridian."
       footer={
         <>
-          New to Apexvest?{" "}
+          New to Meridian?{" "}
           <Link
             href={sp.plan ? `/register?plan=${sp.plan}` : "/register"}
             className={authLink}

@@ -10,6 +10,7 @@ const RESERVED = new Set([
   "root",
   "support",
   "help",
+  "meridian",
   "apexvest",
   "system",
   "staff",

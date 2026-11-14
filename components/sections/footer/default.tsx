@@ -1,7 +1,7 @@
-import { brand, footer } from "@/content/site";
+import { footer } from "@/content/site";
 import { cn } from "@/lib/utils";
 
-import Apexvest from "../../logos/apexvest";
+import Meridian from "../../logos/meridian";
 import {
   Footer,
   FooterBottom,
@@ -17,10 +17,7 @@ export default function FooterSection({ className }: { className?: string }) {
         <Footer>
           <FooterContent className="md:grid-cols-4 lg:grid-cols-4">
             <FooterColumn className="col-span-2 sm:col-span-3 md:col-span-1">
-              <div className="flex items-center gap-2">
-                <Apexvest />
-                <span className="text-xl font-bold">{brand.name}</span>
-              </div>
+              <Meridian className="w-fit text-2xl" />
             </FooterColumn>
             {footer.columns.map((column) => (
               <FooterColumn key={column.title}>

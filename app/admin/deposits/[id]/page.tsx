@@ -20,7 +20,7 @@ import { Button } from "@/components/ui/button";
 import { requireAdmin } from "@/lib/auth/guards";
 import { coinLogo, explorerTxUrl } from "@/lib/coins";
 import { connectDb } from "@/lib/db";
-import { DEPOSIT_LABEL } from "@/lib/deposit-status";
+import { depositLabel } from "@/lib/deposit-status";
 import { formatCrypto } from "@/lib/format-crypto";
 import { AuditLog, Deposit, Kyc } from "@/lib/models";
 import { formatDateTime, formatUsd } from "@/lib/money";
@@ -49,6 +49,9 @@ type D = {
   rate?: number;
   txRef?: string;
   reference?: string;
+  provider?: string;
+  providerPaymentId?: string;
+  providerStatus?: string;
   status: string;
   reason?: string;
   createdAt: string;
@@ -120,7 +123,10 @@ export default async function DepositDetail({
   }[];
   const logo = coinLogo(d.asset);
   const explorer = d.txRef ? explorerTxUrl(d.network, d.txRef) : null;
-  const reviewable = d.status === "pending";
+  // Online payments are confirmed by the provider. A person only steps in for an underpaid one.
+  const reviewable =
+    d.status === "pending" &&
+    (!d.provider || d.providerStatus === "partially_paid");
 
   return (
     <>
@@ -135,7 +141,10 @@ export default async function DepositDetail({
           title={d.reference ?? "Deposit"}
           description={`${formatUsd(d.amountCents)} via ${d.asset} on ${d.network}`}
           action={
-            <StatusBadge status={d.status} label={DEPOSIT_LABEL[d.status]} />
+            <StatusBadge
+              status={d.status}
+              label={depositLabel(d.status, d.provider)}
+            />
           }
         />
       </div>
@@ -234,6 +243,38 @@ export default async function DepositDetail({
               </p>
             )}
           </Panel>
+
+          {d.provider && (
+            <Panel
+              title="Online payment"
+              description="Confirmed automatically by the payment provider. The balance is credited as soon as the network confirms it."
+            >
+              <dl className="divide-y">
+                <Row label="Provider">NOWPayments</Row>
+                <Row label="Provider status">
+                  <span className="capitalize">
+                    {(d.providerStatus ?? "waiting").replace(/_/g, " ")}
+                  </span>
+                </Row>
+                {d.providerPaymentId && (
+                  <Row label="Provider payment ID">{d.providerPaymentId}</Row>
+                )}
+              </dl>
+              {d.providerStatus === "partially_paid" && (
+                <p className="border-gold/50 bg-gold/10 rounded-lg border p-3 text-xs">
+                  Less than the requested amount arrived. Credit what actually
+                  arrived below, or reject it.
+                </p>
+              )}
+              {d.status === "pending" &&
+                d.providerStatus !== "partially_paid" && (
+                  <p className="text-muted-foreground text-xs">
+                    Funds were seen on the network and are being confirmed.
+                    Nothing to do here.
+                  </p>
+                )}
+            </Panel>
+          )}
 
           {reviewable && (
             <Panel

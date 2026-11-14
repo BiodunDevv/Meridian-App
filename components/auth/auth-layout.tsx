@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { DecorIcon } from "@/components/decor-icon";
-import Apexvest from "@/components/logos/apexvest";
+import Meridian from "@/components/logos/meridian";
 import Glow from "@/components/ui/glow";
 import { ModeToggle } from "@/components/ui/mode-toggle";
 import { brand } from "@/content/site";
@@ -57,10 +57,10 @@ export function AuthLayout({
       </div>
       <Link
         href="/"
-        className="absolute top-4 left-4 flex items-center gap-2 text-base font-bold tracking-tight"
+        aria-label={brand.name}
+        className="absolute top-4 left-4 flex items-center text-xl"
       >
-        <Apexvest width={24} height={24} />
-        {brand.name}
+        <Meridian />
       </Link>
       <div className="absolute top-3 right-3">
         <ModeToggle />

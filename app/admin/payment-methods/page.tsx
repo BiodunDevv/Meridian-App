@@ -38,6 +38,7 @@ import { Button } from "@/components/ui/button";
 import { ASSET_SUGGESTIONS } from "@/lib/coins";
 import { connectDb } from "@/lib/db";
 import { Asset } from "@/lib/models";
+import { paymentsConfigured, providerCode } from "@/lib/payments/nowpayments";
 import { plain } from "@/lib/services/queries";
 
 export const metadata: Metadata = { title: "Payment methods" };
@@ -46,7 +47,13 @@ type A = {
   symbol: string;
   name: string;
   active: boolean;
-  networks: { name: string; address: string; memo?: string; active: boolean }[];
+  networks: {
+    name: string;
+    address: string;
+    memo?: string;
+    providerCode?: string;
+    active: boolean;
+  }[];
 };
 
 export default async function PaymentMethods({
@@ -59,10 +66,15 @@ export default async function PaymentMethods({
   const all = plain(
     await Asset.find().sort({ sort: 1, symbol: 1 }).lean(),
   ) as A[];
+  const online = paymentsConfigured();
+  // A network works when it has an address, or when the payment provider can create addresses for it.
+  const works = (a: A, n: A["networks"][number]) =>
+    n.active &&
+    (Boolean(n.address) ||
+      (online && Boolean(providerCode(a.symbol, n.name, n.providerCode))));
   const needsAddress = (a: A) =>
-    a.networks.length === 0 || a.networks.some((n) => n.active && !n.address);
-  const isLive = (a: A) =>
-    a.active && a.networks.some((n) => n.active && n.address);
+    a.networks.length === 0 || a.networks.some((n) => n.active && !works(a, n));
+  const isLive = (a: A) => a.active && a.networks.some((n) => works(a, n));
   const live = all.filter(isLive).length;
   const attention = all.filter((a) => a.active && needsAddress(a)).length;
   const hidden = all.filter((a) => !a.active).length;
@@ -280,14 +292,28 @@ export default async function PaymentMethods({
                                 Hidden
                               </span>
                             )}
-                            {n.active && !n.address && (
+                            {n.active && !works(a, n) && (
                               <span className="text-gold-foreground text-xs font-normal">
                                 Needs an address
                               </span>
                             )}
+                            {n.active &&
+                              online &&
+                              providerCode(
+                                a.symbol,
+                                n.name,
+                                n.providerCode,
+                              ) && (
+                                <span className="border-success/40 text-success bg-success/10 rounded-md border px-1.5 py-0.5 text-[10px] font-medium">
+                                  Automatic
+                                </span>
+                              )}
                           </p>
                           <p className="text-muted-foreground font-mono text-xs break-all">
-                            {n.address || "No address set"}
+                            {n.address ||
+                              (works(a, n)
+                                ? "Created by the payment provider for each deposit"
+                                : "No address set")}
                           </p>
                           {n.memo && (
                             <p className="text-muted-foreground text-xs">

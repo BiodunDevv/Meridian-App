@@ -25,8 +25,20 @@ export default function Image() {
       <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
         <svg width="72" height="72" viewBox="0 0 32 32">
           <rect width="32" height="32" rx="8" fill="#2459f2" />
-          <path d="M5 24 14 8l9 16H5Z" fill="#fff" />
-          <path d="m16.5 24 5-8.5 5.5 8.5h-10.5Z" fill="#d4af37" />
+          <path
+            d="M8.5 21.5V9.5l7.5 7.5 7.5-7.5v12"
+            stroke="#fff"
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            fill="none"
+          />
+          <path
+            d="M7 26h18"
+            stroke="#d4af37"
+            strokeWidth="2.4"
+            strokeLinecap="round"
+          />
         </svg>
         <div style={{ fontSize: 64, fontWeight: 700 }}>{brand.name}</div>
       </div>

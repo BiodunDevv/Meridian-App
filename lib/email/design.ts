@@ -1,5 +1,5 @@
 /**
- * Apexvest email design module.
+ * Meridian email design module.
  *
  * Templates are written as a list of typed blocks and rendered to
  * email-safe HTML (tables, inline styles, bulletproof button, dark-mode

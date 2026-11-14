@@ -93,7 +93,7 @@ export function InstallProvider({ children }: { children: React.ReactNode }) {
     await event.prompt();
     const choice = await event.userChoice;
     setEvent(null);
-    if (choice.outcome === "accepted") toast.success("Installing Apexvest…");
+    if (choice.outcome === "accepted") toast.success("Installing Meridian…");
   }
 
   return (
@@ -139,14 +139,14 @@ function IosSteps() {
         <span className="bg-brand/10 text-brand flex size-8 shrink-0 items-center justify-center rounded-lg">
           <CheckCircle2 className="size-4" aria-hidden="true" />
         </span>
-        <span>Open Apexvest from your Home Screen</span>
+        <span>Open Meridian from your Home Screen</span>
       </li>
     </ol>
   );
 }
 
 /**
- * "Install Apexvest" as a modal. If skipped, it comes back after a week. `allowed` lets the layout hold it back
+ * "Install Meridian" as a modal. If skipped, it comes back after a week. `allowed` lets the layout hold it back
  * while another first-run prompt (username, two-step login) is showing.
  */
 export function InstallModal({ allowed }: { allowed: boolean }) {
@@ -187,10 +187,10 @@ export function InstallModal({ allowed }: { allowed: boolean }) {
             height={64}
             className="mb-1 size-16 rounded-2xl shadow-md"
           />
-          <DialogTitle>Install Apexvest</DialogTitle>
+          <DialogTitle>Install Meridian</DialogTitle>
           <DialogDescription>
             {isIos && !canPrompt
-              ? "Add Apexvest to your Home Screen for the best experience."
+              ? "Add Meridian to your Home Screen for the best experience."
               : "Get the app on your device for a faster, full-screen experience."}
           </DialogDescription>
         </DialogHeader>
@@ -235,7 +235,7 @@ export function InstallPanel() {
   if (installed) {
     return (
       <p className="text-success flex items-center gap-2 text-sm">
-        <CheckCircle2 className="size-4" aria-hidden="true" /> Apexvest is
+        <CheckCircle2 className="size-4" aria-hidden="true" /> Meridian is
         installed on this device.
       </p>
     );
@@ -267,7 +267,7 @@ export function InstallPanel() {
         <p className="text-muted-foreground text-sm">
           Your browser has not offered installation yet. In Chrome or Edge, look
           for the install icon in the address bar, or open the browser menu and
-          choose “Install Apexvest”. Installing needs a secure (https)
+          choose “Install Meridian”. Installing needs a secure (https)
           connection.
         </p>
       )}

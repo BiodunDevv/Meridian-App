@@ -80,6 +80,7 @@ const tones: Record<string, string> = {
     "border-destructive-foreground/40 text-destructive-foreground bg-destructive-foreground/10",
   none: "text-muted-foreground",
   awaiting: "border-brand/40 text-brand bg-brand/10",
+  processing: "border-brand/40 text-brand bg-brand/10",
   expired: "text-muted-foreground",
   cancelled: "text-muted-foreground",
 };

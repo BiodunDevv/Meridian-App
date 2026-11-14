@@ -11,7 +11,7 @@ export default function OfflinePage() {
       </span>
       <h1 className="text-xl font-semibold">You are offline</h1>
       <p className="text-muted-foreground max-w-xs text-sm">
-        Apexvest needs a connection to show your balance. Check your network and
+        Meridian needs a connection to show your balance. Check your network and
         try again.
       </p>
     </main>

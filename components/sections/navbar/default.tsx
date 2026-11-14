@@ -9,7 +9,7 @@ import { appLinks, brand, nav } from "@/content/site";
 import { useMe } from "@/lib/use-me";
 import { cn } from "@/lib/utils";
 
-import Apexvest from "../../logos/apexvest";
+import Meridian from "../../logos/meridian";
 import { Button } from "../../ui/button";
 import { ModeToggle } from "../../ui/mode-toggle";
 import {
@@ -72,10 +72,10 @@ export default function Navbar() {
           <NavbarLeft className="gap-3">
             <Link
               href="/"
-              className="flex items-center gap-2 text-xl font-bold tracking-tight"
+              aria-label={brand.name}
+              className="flex items-center text-2xl"
             >
-              <Apexvest />
-              {brand.name}
+              <Meridian />
             </Link>
           </NavbarLeft>
           <div className="hidden items-center gap-1 lg:flex">

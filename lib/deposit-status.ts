@@ -7,3 +7,9 @@ export const DEPOSIT_LABEL: Record<string, string> = {
   expired: "Expired",
   cancelled: "Cancelled",
 };
+
+/** The label for a deposit. An online payment that was seen on the network reads "Confirming". */
+export const depositLabel = (status: string, provider?: string | null) =>
+  provider && status === "pending"
+    ? "Confirming"
+    : (DEPOSIT_LABEL[status] ?? status);

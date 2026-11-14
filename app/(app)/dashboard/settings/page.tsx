@@ -154,7 +154,7 @@ export default async function SettingsPage() {
 
       <Panel
         title="Install the app"
-        description="Add Apexvest to your device for faster access and a full-screen experience."
+        description="Add Meridian to your device for faster access and a full-screen experience."
       >
         <InstallPanel />
       </Panel>

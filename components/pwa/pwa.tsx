@@ -74,7 +74,7 @@ export function InstallPrompt() {
         )}
       </span>
       <div className="min-w-0 flex-1">
-        <p className="font-medium">Install Apexvest</p>
+        <p className="font-medium">Install Meridian</p>
         <p className="text-muted-foreground text-xs">
           {ios
             ? "Tap Share, then “Add to Home Screen” for a full-screen app."

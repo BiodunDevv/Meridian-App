@@ -121,7 +121,7 @@
 
 @layer base {
   :root {
-    /* Apexvest palette: electric blue, elegant gold, dark navy */
+    /* Meridian palette: electric blue, elegant gold, dark navy */
     --brand: #2459f2; /* electric blue */
     --brand-foreground: #5b8cff; /* lighter electric blue, used by the glow */
     --gold: #d4af37; /* elegant gold */

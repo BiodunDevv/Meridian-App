@@ -44,6 +44,7 @@ type Row = {
   network: string;
   address: string;
   reference?: string;
+  holdReason?: string;
   amountCents: number;
   status: string;
   txHash?: string;
@@ -51,6 +52,7 @@ type Row = {
 
 const LABEL: Record<string, string> = {
   pending: "Under review",
+  processing: "Sending",
   paid: "Paid",
   rejected: "Rejected",
 };
@@ -91,7 +93,7 @@ export default async function AdminWithdrawals({
   await connectDb();
   // eslint-disable-next-line react-hooks/purity -- server component, evaluated per request
   const since = new Date(Date.now() - 30 * 86_400_000);
-  const [pendRaw, hist, paidAgg] = await Promise.all([
+  const [pendRaw, hist, paidAgg, sending] = await Promise.all([
     Withdrawal.find({ status: "pending" })
       .populate("userId", "email")
       .sort({ createdAt: 1 })
@@ -101,6 +103,7 @@ export default async function AdminWithdrawals({
       { $match: { status: "paid", reviewedAt: { $gte: since } } },
       { $group: { _id: null, cents: { $sum: "$amountCents" } } },
     ]),
+    Withdrawal.countDocuments({ status: "processing" }),
   ]);
   const pend = plain(pendRaw) as Row[];
   const rows = hist.rows as Row[];
@@ -113,7 +116,7 @@ export default async function AdminWithdrawals({
         description="The amount is already held from the user. Open a request, send the payout, then record the transaction hash. Rejecting returns the amount to the user."
       />
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Waiting to be paid"
           value={String(pend.length)}
@@ -129,6 +132,12 @@ export default async function AdminWithdrawals({
           tone="gold"
         />
         <StatCard
+          label="Sending automatically"
+          value={String(sending)}
+          icon={Send}
+          hint="Passed the automatic checks"
+        />
+        <StatCard
           label="Paid, last 30 days"
           value={formatUsd((paidAgg as { cents: number }[])[0]?.cents ?? 0)}
           icon={Send}
@@ -136,7 +145,7 @@ export default async function AdminWithdrawals({
         />
       </div>
 
-      <Panel title={`Needs payout (${pend.length})`}>
+      <Panel title={`Needs a person (${pend.length})`}>
         {pend.length === 0 ? (
           <EmptyState
             variant="done"
@@ -172,6 +181,9 @@ export default async function AdminWithdrawals({
                   </p>
                   <p className="font-mono">To {short(w.address)}</p>
                   <p>Waiting {waited(w.createdAt)}</p>
+                  {w.holdReason && (
+                    <p className="text-gold-foreground">{w.holdReason}</p>
+                  )}
                 </div>
                 <Button asChild size="sm" className="mt-auto w-full">
                   <Link href={`/admin/withdrawals/${w._id}`}>
@@ -196,6 +208,7 @@ export default async function AdminWithdrawals({
               label: "Status",
               options: [
                 { value: "pending", label: "Under review" },
+                { value: "processing", label: "Sending" },
                 { value: "paid", label: "Paid" },
                 { value: "rejected", label: "Rejected" },
               ],

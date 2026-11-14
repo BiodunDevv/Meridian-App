@@ -31,6 +31,7 @@ export const metadata: Metadata = { title: "Withdrawal details" };
 
 const LABEL: Record<string, string> = {
   pending: "Under review",
+  processing: "Sending",
   paid: "Paid",
   rejected: "Rejected",
 };
@@ -51,7 +52,12 @@ type W = {
   network: string;
   address: string;
   amountCents: number;
-  status: "pending" | "paid" | "rejected";
+  status: "pending" | "processing" | "paid" | "rejected";
+  provider?: string;
+  providerPayoutId?: string;
+  providerStatus?: string;
+  cryptoAmount?: number;
+  holdReason?: string;
   txHash?: string;
   reason?: string;
   createdAt: string;
@@ -136,9 +142,11 @@ export default async function AdminWithdrawalDetail({
       sub:
         w.status === "pending"
           ? "Waiting for you"
-          : w.reviewedAt
-            ? formatDateTime(w.reviewedAt)
-            : undefined,
+          : w.status === "processing"
+            ? "Approved automatically"
+            : w.reviewedAt
+              ? formatDateTime(w.reviewedAt)
+              : undefined,
       state:
         w.status === "pending"
           ? "current"
@@ -148,7 +156,12 @@ export default async function AdminWithdrawalDetail({
     },
     {
       label: w.status === "rejected" ? "Refunded" : "Paid out",
-      state: w.status === "pending" ? "todo" : "done",
+      state:
+        w.status === "pending"
+          ? "todo"
+          : w.status === "processing"
+            ? "current"
+            : "done",
     },
   ];
 
@@ -230,6 +243,35 @@ export default async function AdminWithdrawalDetail({
               </div>
             )}
           </Panel>
+
+          {w.status === "processing" && (
+            <Panel
+              title="Being sent automatically"
+              description="It passed the automatic checks and the payment provider is sending it. Nothing to do unless it fails."
+            >
+              <dl className="divide-y">
+                <Row label="Provider status">
+                  <span className="capitalize">
+                    {w.providerStatus ?? "processing"}
+                  </span>
+                </Row>
+                {w.providerPayoutId && (
+                  <Row label="Provider payout ID">{w.providerPayoutId}</Row>
+                )}
+                {w.cryptoAmount != null && (
+                  <Row label="Amount sent">
+                    {w.cryptoAmount} {w.asset}
+                  </Row>
+                )}
+              </dl>
+            </Panel>
+          )}
+
+          {w.status === "pending" && w.holdReason && (
+            <p className="border-gold/50 bg-gold/10 rounded-lg border p-3 text-sm">
+              <strong>Held for review.</strong> {w.holdReason}
+            </p>
+          )}
 
           {w.status === "pending" && (
             <Panel

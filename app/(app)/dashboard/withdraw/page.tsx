@@ -23,6 +23,7 @@ export const metadata: Metadata = { title: "Withdraw" };
 
 const LABEL: Record<string, string> = {
   pending: "Under review",
+  processing: "Sending",
   paid: "Paid",
   rejected: "Rejected",
 };

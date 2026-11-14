@@ -4,12 +4,22 @@ import Link from "next/link";
 
 import {
   saveActivityTickerAction,
+  savePaymentSettingsAction,
   saveReferralSettingsAction,
+  testPaymentsAction,
 } from "@/app/actions/admin";
+import { CopyField } from "@/components/app/copy-field";
 import { ActionForm, SubmitButton, TextField } from "@/components/app/form";
+import { ToastForm } from "@/components/app/toast-form";
 import { PageHeader, Panel } from "@/components/app/ui";
 import { Button } from "@/components/ui/button";
+import { getEnv } from "@/lib/env";
+import {
+  paymentsConfigured,
+  payoutsConfigured,
+} from "@/lib/payments/nowpayments";
 import { isTickerEnabled } from "@/lib/services/activity";
+import { getPaymentSettings } from "@/lib/services/payments";
 import { getReferralSettings } from "@/lib/services/referrals";
 
 export const metadata: Metadata = { title: "Settings" };
@@ -42,10 +52,30 @@ const links = [
 ];
 
 export default async function AdminSettings() {
-  const [ref, ticker] = await Promise.all([
+  const [ref, ticker, pay] = await Promise.all([
     getReferralSettings(),
     isTickerEnabled(),
+    getPaymentSettings(),
   ]);
+  const env = getEnv();
+  const checks: [string, boolean, string][] = [
+    ["API key", Boolean(env.NOWPAYMENTS_API_KEY), "NOWPAYMENTS_API_KEY"],
+    [
+      "Webhook secret",
+      Boolean(env.NOWPAYMENTS_IPN_SECRET),
+      "NOWPAYMENTS_IPN_SECRET",
+    ],
+    [
+      "Payout login",
+      Boolean(env.NOWPAYMENTS_EMAIL && env.NOWPAYMENTS_PASSWORD),
+      "NOWPAYMENTS_EMAIL and NOWPAYMENTS_PASSWORD",
+    ],
+    [
+      "Payout 2FA",
+      Boolean(env.NOWPAYMENTS_2FA_SECRET),
+      "NOWPAYMENTS_2FA_SECRET",
+    ],
+  ];
   return (
     <>
       <PageHeader title="Settings" description="Platform configuration." />
@@ -61,6 +91,96 @@ export default async function AdminSettings() {
           </Panel>
         ))}
       </div>
+
+      <Panel
+        title="Online payments"
+        description="Deposits are detected and credited automatically, and withdrawals are paid automatically when they pass the safety checks. Anything else waits for a person."
+      >
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+          {checks.map(([label, ok, envName]) => (
+            <div
+              key={label}
+              className="flex items-start gap-2 rounded-lg border px-3 py-2 text-sm"
+            >
+              <span
+                className={`mt-1.5 size-2 shrink-0 rounded-full ${ok ? "bg-success" : "bg-muted-foreground/40"}`}
+              />
+              <span>
+                <span className="font-medium">{label}</span>
+                <span className="text-muted-foreground block text-xs">
+                  {ok ? "Connected" : `Set ${envName}`}
+                </span>
+              </span>
+            </div>
+          ))}
+        </div>
+        <p className="text-muted-foreground text-xs">
+          Mode:{" "}
+          {paymentsConfigured()
+            ? env.NOWPAYMENTS_SANDBOX === "true"
+              ? "sandbox (test money only)"
+              : "live"
+            : "manual review"}
+          .
+          {payoutsConfigured()
+            ? " Automatic payouts are available."
+            : " Without a payout login, withdrawals stay manual."}
+        </p>
+        <CopyField
+          label="Webhook URL (paste into your provider's IPN settings)"
+          value={`${env.NEXT_PUBLIC_SITE_URL}/api/webhooks/payments`}
+          mono
+        />
+        <ToastForm action={testPaymentsAction}>
+          <SubmitButton variant="outline" size="default" pending="Testing…">
+            Test connection
+          </SubmitButton>
+        </ToastForm>
+        <ActionForm
+          action={savePaymentSettingsAction}
+          className="grid max-w-2xl grid-cols-1 gap-4 sm:grid-cols-3"
+          resetOnSuccess={false}
+        >
+          <TextField
+            name="maxUsd"
+            label="Per withdrawal limit (USD)"
+            type="number"
+            min="1"
+            defaultValue={pay.maxUsd}
+            required
+            hint="Above this, a person checks it."
+          />
+          <TextField
+            name="dailyUsd"
+            label="Daily limit per user (USD)"
+            type="number"
+            min="1"
+            defaultValue={pay.dailyUsd}
+            required
+          />
+          <TextField
+            name="newAddressMaxUsd"
+            label="New address limit (USD)"
+            type="number"
+            min="1"
+            defaultValue={pay.newAddressMaxUsd}
+            required
+            hint="First payout to an address."
+          />
+          <label className="flex items-center gap-2 text-sm sm:col-span-2">
+            <input
+              type="checkbox"
+              name="autoWithdraw"
+              defaultChecked={pay.autoWithdraw}
+              className="size-4"
+            />{" "}
+            Pay withdrawals automatically
+          </label>
+          <div className="sm:justify-self-end">
+            <SubmitButton pending="Saving…">Save</SubmitButton>
+          </div>
+        </ActionForm>
+      </Panel>
 
       <Panel
         title="Referral programme"

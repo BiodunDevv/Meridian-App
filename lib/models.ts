@@ -115,6 +115,8 @@ const assetSchema = new Schema(
         name: { type: String, required: true },
         address: { type: String, default: "" },
         memo: { type: String, default: "" },
+        /** Payment provider currency code (e.g. usdttrc20). Empty = guessed from the asset and network. */
+        providerCode: { type: String, default: "" },
         active: { type: Boolean, default: true },
       },
     ],
@@ -155,6 +157,11 @@ const depositSchema = new Schema(
     /** What was actually credited if an admin credited a different amount than requested. */
     creditedCents: Number,
     txRef: { type: String, default: "" },
+    /** Set when an online payment provider handles this payment. */
+    provider: String,
+    providerPaymentId: { type: String, index: true, sparse: true },
+    providerStatus: String,
+    lastSyncAt: Date,
     /** Short invoice number shown to the user, e.g. DEP-7K3Q9M. */
     reference: { type: String, unique: true, sparse: true },
     memo: String,
@@ -197,9 +204,18 @@ const withdrawalSchema = new Schema(
     network: { type: String, required: true },
     address: { type: String, required: true },
     amountCents: { type: Number, required: true, min: 1 },
+    /** Set when the payout is sent automatically by a payment provider. */
+    provider: String,
+    providerBatchId: String,
+    providerPayoutId: { type: String, index: true, sparse: true },
+    providerStatus: String,
+    cryptoAmount: Number,
+    /** Why a request is waiting for a person instead of being paid automatically. */
+    holdReason: String,
+    lastSyncAt: Date,
     status: {
       type: String,
-      enum: ["pending", "paid", "rejected"],
+      enum: ["pending", "processing", "paid", "rejected"],
       default: "pending",
       index: true,
     },
@@ -311,7 +327,8 @@ export const Notification = defineModel("Notification", notificationSchema);
 
 const auditSchema = new Schema(
   {
-    actorId: oid("User"),
+    /** Empty for automatic actions taken by the system. */
+    actorId: oid("User", false),
     actorEmail: String,
     action: { type: String, required: true },
     target: String,

@@ -23,7 +23,7 @@ export const BUILT_IN_TEMPLATES: MessageTemplateDef[] = [
     category: "Onboarding",
     name: "Make your first deposit",
     subject: "Ready to make your first deposit?",
-    body: "Hi {{firstName}},\n\nYour Apexvest account is ready. Funding it takes about a minute:\n\n- Open **Deposit** and pick an asset and network\n- Send to the address shown, then tap **I have paid**\n- We confirm and credit your balance, targeted within the hour\n\nOnly send the asset on the network shown. Funds sent to the wrong network may be lost.",
+    body: "Hi {{firstName}},\n\nYour Meridian account is ready. Funding it takes about a minute:\n\n- Open **Deposit** and pick an asset and network\n- Send to the address shown, then tap **I have paid**\n- We confirm and credit your balance, targeted within the hour\n\nOnly send the asset on the network shown. Funds sent to the wrong network may be lost.",
     audience: "Never deposited",
   },
   {
@@ -87,7 +87,7 @@ export const BUILT_IN_TEMPLATES: MessageTemplateDef[] = [
     category: "Support",
     name: "Terms or policy update",
     subject: "We have updated our terms",
-    body: "Hi {{firstName}},\n\nWe have updated our Terms of Service and Privacy Policy. Please take a moment to read the changes. By continuing to use Apexvest you accept the updated terms.",
+    body: "Hi {{firstName}},\n\nWe have updated our Terms of Service and Privacy Policy. Please take a moment to read the changes. By continuing to use Meridian you accept the updated terms.",
     audience: "All users",
   },
   {

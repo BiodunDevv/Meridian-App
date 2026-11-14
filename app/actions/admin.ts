@@ -20,10 +20,16 @@ import {
   UserNote,
   Withdrawal,
 } from "@/lib/models";
+import {
+  checkConnection,
+  paymentsConfigured,
+  providerCode,
+} from "@/lib/payments/nowpayments";
 import { clearActivityCache } from "@/lib/services/activity";
 import { approveDeposit, rejectDeposit } from "@/lib/services/deposits";
 import { reviewKyc } from "@/lib/services/kyc";
 import { audit } from "@/lib/services/notify";
+import { savePaymentSettings } from "@/lib/services/payments";
 import { syncDefaultPlans } from "@/lib/services/plans-seed";
 import {
   markWithdrawalPaid,
@@ -525,14 +531,21 @@ export async function saveNetworkAction(
       symbol: z.string().min(1),
       // Optional: blank means the coin's own (native) network.
       network: z.string().trim().max(40).optional(),
-      address: addressSchema,
+      address: addressSchema.or(z.literal("")),
       memo: memoSchema,
+      providerCode: z
+        .string()
+        .trim()
+        .toLowerCase()
+        .max(40)
+        .regex(/^[a-z0-9]*$/, "The provider code is letters and numbers only."),
     })
     .safeParse({
       symbol: str(f, "symbol"),
       network: str(f, "network"),
       address: str(f, "address"),
       memo: str(f, "memo"),
+      providerCode: str(f, "providerCode"),
     });
   if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
   const original = str(f, "original");
@@ -543,7 +556,15 @@ export async function saveNetworkAction(
     if (!a) throw new Error("Asset not found.");
     const network = parsed.data.network || nativeNetwork(symbol, a.name);
     if (network.length < 2) throw new Error("Enter the network name.");
-    const bad = checkAddress(network, address);
+    // With online payments on, the provider supplies the address, so it can be left empty.
+    const auto =
+      paymentsConfigured() &&
+      Boolean(providerCode(symbol, network, parsed.data.providerCode));
+    if (!address && !auto)
+      throw new Error(
+        "Enter the wallet address. It can only be left empty when online payments are set up for this coin and network.",
+      );
+    const bad = address ? checkAddress(network, address) : null;
     if (bad) throw new Error(bad);
     const clash = a.networks.find(
       (n: { name: string }) =>
@@ -564,8 +585,15 @@ export async function saveNetworkAction(
       n.name = network;
       n.address = address;
       n.memo = memo;
+      n.providerCode = parsed.data.providerCode;
     } else {
-      a.networks.push({ name: network, address, memo, active: true });
+      a.networks.push({
+        name: network,
+        address,
+        memo,
+        providerCode: parsed.data.providerCode,
+        active: true,
+      });
     }
     await a.save();
     await audit(
@@ -750,4 +778,67 @@ export async function saveActivityTickerAction(
     await audit(admin, "settings.activity_ticker", String(enabled));
     return enabled ? "Activity ticker is on." : "Activity ticker is off.";
   }, "/admin/settings");
+}
+
+/* ---------- Online payments ---------- */
+export async function savePaymentSettingsAction(
+  _: ActionState,
+  f: FormData,
+): Promise<ActionState> {
+  const admin = await requireAdmin();
+  const parsed = z
+    .object({
+      maxUsd: z.coerce
+        .number({ error: "Enter a number." })
+        .min(1)
+        .max(1_000_000),
+      dailyUsd: z.coerce
+        .number({ error: "Enter a number." })
+        .min(1)
+        .max(10_000_000),
+      newAddressMaxUsd: z.coerce
+        .number({ error: "Enter a number." })
+        .min(1)
+        .max(1_000_000),
+    })
+    .safeParse({
+      maxUsd: str(f, "maxUsd"),
+      dailyUsd: str(f, "dailyUsd"),
+      newAddressMaxUsd: str(f, "newAddressMaxUsd"),
+    });
+  if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
+  if (parsed.data.dailyUsd < parsed.data.maxUsd)
+    return {
+      ok: false,
+      error: "The daily limit cannot be lower than the per-withdrawal limit.",
+    };
+  const value = {
+    ...parsed.data,
+    autoWithdraw: f.get("autoWithdraw") === "on",
+  };
+  return run(async () => {
+    await savePaymentSettings(value);
+    await audit(admin, "settings.payments", "payments", value);
+    return value.autoWithdraw
+      ? "Payment settings saved. Automatic withdrawals are on."
+      : "Payment settings saved. Automatic withdrawals are off.";
+  }, "/admin/settings");
+}
+
+export async function testPaymentsAction(): Promise<ActionState> {
+  await requireAdmin();
+  try {
+    if (!paymentsConfigured())
+      return {
+        ok: false,
+        error:
+          "Online payments are not set up. Add NOWPAYMENTS_API_KEY and NOWPAYMENTS_IPN_SECRET to your environment.",
+      };
+    return { ok: true, message: (await checkConnection()).join(". ") + "." };
+  } catch (e) {
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "The connection test failed.",
+    };
+  }
 }

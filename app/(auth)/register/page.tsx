@@ -20,7 +20,7 @@ export default async function RegisterPage({
     <AuthLayout
       risk
       title="Create account"
-      subtitle="Join Apexvest in under a minute."
+      subtitle="Join Meridian in under a minute."
       footer={
         <>
           Already have an account?{" "}

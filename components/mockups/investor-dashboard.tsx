@@ -10,10 +10,10 @@ import {
   Wallet,
 } from "lucide-react";
 
-import { brand, dashboards } from "@/content/site";
+import { dashboards } from "@/content/site";
 import { cn } from "@/lib/utils";
 
-import Apexvest from "../logos/apexvest";
+import Meridian from "../logos/meridian";
 import { GrowthChart } from "./chart";
 
 const icons = [
@@ -54,9 +54,8 @@ export function InvestorDashboard({ className }: { className?: string }) {
       )}
     >
       <aside className="border-border dark:border-border/10 hidden w-44 shrink-0 flex-col gap-1 border-r p-3 md:flex">
-        <div className="mb-3 flex items-center gap-2 px-2 text-sm font-bold">
-          <Apexvest width={20} height={20} />
-          {brand.name}
+        <div className="mb-3 px-2">
+          <Meridian className="text-base" />
         </div>
         {dashboards.sidebar.map((item, i) => {
           const Icon = icons[i];

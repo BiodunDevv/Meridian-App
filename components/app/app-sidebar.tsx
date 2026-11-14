@@ -35,9 +35,8 @@ import {
   SidebarRail,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { brand } from "@/content/site";
 
-import Apexvest from "../logos/apexvest";
+import Meridian, { MeridianMark } from "../logos/meridian";
 
 type Item = { title: string; href: string; icon: LucideIcon; exact?: boolean };
 type Group = { label?: string; items: Item[] };
@@ -138,8 +137,12 @@ export function AppSidebar({
       <SidebarHeader className="h-14 justify-center">
         <SidebarMenuButton asChild size="lg">
           <Link href={home} onClick={() => setOpenMobile(false)}>
-            <Apexvest width={24} height={24} />
-            <span className="font-semibold tracking-tight">{brand.name}</span>
+            <MeridianMark
+              width={24}
+              height={24}
+              className="hidden group-data-[collapsible=icon]:block"
+            />
+            <Meridian className="text-lg group-data-[collapsible=icon]:hidden" />
             {variant === "admin" && (
               <span className="border-gold/60 text-gold-foreground ml-auto rounded-full border px-2 py-0.5 text-[10px] font-semibold group-data-[collapsible=icon]:hidden">
                 Admin

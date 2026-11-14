@@ -69,7 +69,7 @@ export async function mailAdmins(mail: {
 }
 
 export async function audit(
-  actor: { id: string; email: string },
+  actor: { id: string; email: string } | null,
   action: string,
   target?: string,
   meta?: Record<string, unknown>,
@@ -77,8 +77,8 @@ export async function audit(
   try {
     await connectDb();
     await AuditLog.create({
-      actorId: actor.id,
-      actorEmail: actor.email,
+      ...(actor ? { actorId: actor.id } : {}),
+      actorEmail: actor ? actor.email : "system (automatic)",
       action,
       target,
       meta,

@@ -109,7 +109,7 @@ export function PushToggle({ publicKey }: { publicKey: string }) {
           aria-hidden="true"
         />
         <span className="text-muted-foreground">
-          On iPhone, notifications work once Apexvest is added to your Home
+          On iPhone, notifications work once Meridian is added to your Home
           Screen (iOS 16.4 or later). Tap Share, choose “Add to Home Screen”,
           then open the app and come back here.
         </span>

@@ -1,6 +1,0 @@
-{
-  "crons": [
-    { "path": "/api/cron/accrue", "schedule": "0 0 * * *" },
-    { "path": "/api/cron/emails", "schedule": "0 * * * *" }
-  ]
-}

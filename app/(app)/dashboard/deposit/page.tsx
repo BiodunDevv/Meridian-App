@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/table";
 import { requireUser } from "@/lib/auth/guards";
 import { connectDb } from "@/lib/db";
-import { DEPOSIT_LABEL } from "@/lib/deposit-status";
+import { depositLabel } from "@/lib/deposit-status";
 import { formatCrypto } from "@/lib/format-crypto";
 import { Deposit } from "@/lib/models";
 import { formatDateTime, formatUsd } from "@/lib/money";
@@ -42,6 +42,7 @@ type Row = {
   network: string;
   amountCents: number;
   cryptoAmount?: number;
+  provider?: string;
   status: string;
 };
 
@@ -149,7 +150,7 @@ export default async function DepositPage({
                   <TableCell data-label="Status">
                     <StatusBadge
                       status={d.status}
-                      label={DEPOSIT_LABEL[d.status]}
+                      label={depositLabel(d.status, d.provider)}
                     />
                   </TableCell>
                   <MobileDetails href={`/dashboard/deposit/${d._id}`} />

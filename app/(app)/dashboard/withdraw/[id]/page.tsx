@@ -22,6 +22,7 @@ import { explorerTxUrl } from "@/lib/coins";
 import { connectDb } from "@/lib/db";
 import { Withdrawal } from "@/lib/models";
 import { formatDateTime, formatUsd } from "@/lib/money";
+import { syncWithdrawal } from "@/lib/services/payment-events";
 import { plain } from "@/lib/services/queries";
 
 export const metadata: Metadata = { title: "Withdrawal" };
@@ -33,7 +34,8 @@ type W = {
   network: string;
   address: string;
   amountCents: number;
-  status: "pending" | "paid" | "rejected";
+  status: "pending" | "processing" | "paid" | "rejected";
+  provider?: string;
   txHash?: string;
   reason?: string;
   createdAt: string;
@@ -42,6 +44,7 @@ type W = {
 
 const LABEL: Record<string, string> = {
   pending: "Under review",
+  processing: "Sending",
   paid: "Paid",
   rejected: "Rejected",
 };
@@ -54,6 +57,7 @@ export default async function WithdrawalPage({
   const user = await requireUser();
   const { id } = await params;
   await connectDb();
+  await syncWithdrawal(id).catch(() => {});
   const doc = await Withdrawal.findOne({ _id: id, userId: user.id })
     .lean()
     .catch(() => null);
@@ -73,7 +77,7 @@ export default async function WithdrawalPage({
       state: "done",
     },
     {
-      label: "Reviewed by our team",
+      label: w.provider ? "Checked automatically" : "Reviewed by our team",
       sub:
         w.status === "pending"
           ? "In progress"
@@ -95,8 +99,15 @@ export default async function WithdrawalPage({
       sub:
         w.status === "paid" && w.reviewedAt
           ? formatDateTime(w.reviewedAt)
-          : undefined,
-      state: w.status === "pending" ? "todo" : "done",
+          : w.status === "processing"
+            ? "Sending now"
+            : undefined,
+      state:
+        w.status === "pending"
+          ? "todo"
+          : w.status === "processing"
+            ? "current"
+            : "done",
     },
   ];
 
@@ -108,7 +119,9 @@ export default async function WithdrawalPage({
       >
         <ArrowLeft className="size-4" aria-hidden="true" /> All withdrawals
       </Link>
-      {w.status === "pending" && <LiveRefresh seconds={10} />}
+      {(w.status === "pending" || w.status === "processing") && (
+        <LiveRefresh seconds={10} />
+      )}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
@@ -130,6 +143,25 @@ export default async function WithdrawalPage({
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
+          {w.status === "processing" && (
+            <Panel>
+              <div className="flex items-start gap-3">
+                <Clock
+                  className="text-brand mt-0.5 size-6 shrink-0"
+                  aria-hidden="true"
+                />
+                <div className="space-y-1">
+                  <h2 className="font-semibold">Your payout is on its way</h2>
+                  <p className="text-muted-foreground text-sm">
+                    {formatUsd(w.amountCents)} passed our automatic checks and
+                    is being sent to your wallet now. It usually arrives within
+                    a few minutes, depending on the network. This page updates
+                    by itself, and we will email you when it is done.
+                  </p>
+                </div>
+              </div>
+            </Panel>
+          )}
           {w.status === "pending" && (
             <Panel>
               <div className="flex items-start gap-3">

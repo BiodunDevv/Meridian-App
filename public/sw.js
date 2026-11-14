@@ -1,4 +1,4 @@
-/* Apexvest service worker: static-asset caching, an offline fallback, and web push.
+/* Meridian service worker: static-asset caching, an offline fallback, and web push.
    Authenticated pages and API responses are never cached. */
 const VERSION = "apx-v2";
 const STATIC_CACHE = `${VERSION}-static`;
@@ -57,7 +57,7 @@ self.addEventListener("fetch", (event) => {
 
 /* ---------- Web push ---------- */
 self.addEventListener("push", (event) => {
-  let data = { title: "Apexvest", body: "", url: "/dashboard" };
+  let data = { title: "Meridian", body: "", url: "/dashboard" };
   try {
     if (event.data) data = { ...data, ...event.data.json() };
   } catch {
