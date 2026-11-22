@@ -1,16 +1,7 @@
-import {
-  ArrowDownToLine,
-  Layers,
-  PiggyBank,
-  TrendingUp,
-  Wallet,
-} from "lucide-react";
+import { ShoppingBag, Wallet } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { ContinueCard } from "@/components/app/continue-card";
-import { OfferCard } from "@/components/app/offer-card";
-import { PortfolioChart } from "@/components/app/portfolio-chart";
 import {
   Checklist,
   EmptyState,
@@ -19,13 +10,14 @@ import {
   Panel,
   StatCard,
 } from "@/components/app/ui";
+import { PayForTiles } from "@/components/shop/pay-for-tiles";
 import { Button } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth/guards";
 import { connectDb } from "@/lib/db";
-import { Deposit, Investment, Plan, User } from "@/lib/models";
-import { formatDate, formatUsd } from "@/lib/money";
-import { getOffer } from "@/lib/services/offers";
-import { investorOverview } from "@/lib/services/queries";
+import { Order } from "@/lib/models";
+import { formatDate, formatMinor, formatUsd } from "@/lib/money";
+import { orderLabel } from "@/lib/order-status";
+import { customerOverview } from "@/lib/services/queries";
 import { kycStatus } from "@/lib/services/withdrawals";
 
 export const metadata: Metadata = { title: "Overview" };
@@ -33,42 +25,51 @@ export const metadata: Metadata = { title: "Overview" };
 export default async function Overview() {
   const user = await requireUser();
   await connectDb();
-  const [o, kyc, funded, invested, offer, pendingPlan] = await Promise.all([
-    investorOverview(user.id),
+  const [o, kyc, recentOrders, openOrders] = await Promise.all([
+    customerOverview(user.id),
     kycStatus(user.id),
-    Deposit.countDocuments({ userId: user.id, status: "approved" }),
-    Investment.countDocuments({ userId: user.id }),
-    getOffer(user.id),
-    User.findById(user.id)
-      .select("pendingPlanSlug")
-      .lean()
-      .then((u) =>
-        u?.pendingPlanSlug
-          ? Plan.findOne({ slug: u.pendingPlanSlug, active: true }).lean()
-          : null,
-      ),
+    Order.find({ userId: user.id }).sort({ createdAt: -1 }).limit(5).lean(),
+    Order.countDocuments({
+      userId: user.id,
+      status: { $in: ["awaiting_payment", "paid", "fulfilling", "review"] },
+    }),
   ]);
+  const orders = JSON.parse(JSON.stringify(recentOrders)) as {
+    _id: string;
+    number: string;
+    status: string;
+    amountMinor: number;
+    currency: "NGN" | "USD";
+    createdAt: string;
+    snapshot?: { productName?: string };
+  }[];
   const first = (user.name || user.email).split(/[ @]/)[0];
 
   return (
     <>
       <PageHeader
         title={`Welcome back, ${first}`}
-        description="Your portfolio, deposits and withdrawals at a glance."
+        description="Your orders and store credit at a glance."
         action={
           <Button asChild>
-            <Link href="/dashboard/deposit?new=1">
-              <ArrowDownToLine /> Deposit
+            <Link href="/dashboard/shop">
+              <ShoppingBag /> Shop
             </Link>
           </Button>
         }
       />
+      <section aria-labelledby="pay-for" className="space-y-3">
+        <h2 id="pay-for" className="text-sm font-semibold">
+          What do you want to pay for?
+        </h2>
+        <PayForTiles />
+      </section>
       {kyc !== "approved" && (
         <div className="border-gold/50 bg-gold/10 flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm">
           <span>
             {kyc === "pending"
-              ? "Your identity verification is under review. Withdrawals unlock once it is approved."
-              : "Verify your identity to unlock withdrawals."}
+              ? "Your identity verification is under review."
+              : "Verify your identity to raise your limits."}
           </span>
           {kyc !== "pending" && (
             <Button asChild size="sm" variant="outline">
@@ -77,41 +78,13 @@ export default async function Overview() {
           )}
         </div>
       )}
-      {pendingPlan && invested === 0 && (
-        <ContinueCard
-          plan={{
-            slug: pendingPlan.slug as string,
-            name: pendingPlan.name as string,
-            minCents: pendingPlan.minCents as number,
-            maxCents: pendingPlan.maxCents as number,
-            durationDays: pendingPlan.durationDays as number,
-            projectedPct: pendingPlan.projectedPct as number,
-          }}
-          available={o.available}
-        />
-      )}
-      {offer && <OfferCard offer={offer} />}
       <Checklist
         title="Get started"
-        description="Four quick steps to get the most out of your account."
+        description="Quick steps to secure your account."
         steps={[
           {
-            label: "Make your first deposit",
-            hint: "Send crypto and we credit your balance once it is confirmed.",
-            done: funded > 0 || o.available > 0,
-            href: "/dashboard/deposit",
-            cta: "Deposit",
-          },
-          {
-            label: "Start an investment",
-            hint: "Compare plan terms, then put your balance to work.",
-            done: invested > 0,
-            href: "/dashboard/investments",
-            cta: "Pick a plan",
-          },
-          {
             label: "Verify your identity",
-            hint: "Required before your first withdrawal.",
+            hint: "Needed for higher limits.",
             done: kyc === "approved" || kyc === "pending",
             href: "/dashboard/settings",
             cta: "Verify",
@@ -127,84 +100,98 @@ export default async function Overview() {
       />
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
-          label="Portfolio value"
-          value={formatUsd(o.total)}
-          icon={PiggyBank}
-        />
-        <StatCard
-          label="Available balance"
+          label="Store credit"
           value={formatUsd(o.available)}
           icon={Wallet}
+          hint="From refunds"
         />
         <StatCard
-          label="Total invested"
-          value={formatUsd(o.invested)}
-          hint={`${o.activeCount} active`}
-          icon={Layers}
-        />
-        <StatCard
-          label="Profit / loss"
-          value={`${o.profit >= 0 ? "+" : ""}${formatUsd(o.profit)}`}
-          tone={o.profit > 0 ? "positive" : undefined}
-          icon={TrendingUp}
-          hint="Projected, illustrative"
+          label="Open orders"
+          value={String(openOrders)}
+          icon={ShoppingBag}
         />
       </div>
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
-        <Panel
-          title="Portfolio growth"
-          description="Last 30 days, in USD"
-          className="lg:col-span-3"
-        >
-          <PortfolioChart data={o.series} />
-        </Panel>
-        <Panel title="Recent activity" className="lg:col-span-2">
-          {o.recent.length === 0 ? (
-            <EmptyState
-              title="No activity yet"
-              body="Make a deposit to get started."
-            />
-          ) : (
-            <ul className="divide-y">
-              {o.recent.map(
-                (e: {
-                  _id: string;
-                  type: string;
-                  amountCents: number;
-                  createdAt: string;
-                }) => (
-                  <li
-                    key={e._id}
-                    className="flex items-center justify-between gap-3 py-2.5 text-sm"
+      <Panel title="Recent orders">
+        {orders.length === 0 ? (
+          <EmptyState
+            title="No orders yet"
+            body="Choose airtime, data, electricity or cable TV."
+          />
+        ) : (
+          <ul className="divide-y">
+            {orders.map((r) => (
+              <li key={r._id}>
+                <Link
+                  href={`/dashboard/orders/${r._id}`}
+                  className="hover:bg-accent/40 flex items-center justify-between gap-3 py-2.5 text-sm"
+                >
+                  <span>
+                    <span className="block font-medium">
+                      {r.snapshot?.productName}
+                    </span>
+                    <span className="text-muted-foreground text-xs">
+                      {r.number} · {formatDate(r.createdAt)} ·{" "}
+                      {orderLabel(r.status)}
+                    </span>
+                  </span>
+                  <span className="font-semibold tabular-nums">
+                    {formatMinor(r.amountMinor, r.currency)}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+        <Button asChild variant="ghost" size="sm" className="self-start">
+          <Link href="/dashboard/orders">View all orders</Link>
+        </Button>
+      </Panel>
+      <Panel title="Store credit activity">
+        {o.recent.length === 0 ? (
+          <EmptyState
+            title="No activity yet"
+            body="Make a deposit to get started."
+          />
+        ) : (
+          <ul className="divide-y">
+            {o.recent.map(
+              (e: {
+                _id: string;
+                type: string;
+                amountCents: number;
+                createdAt: string;
+              }) => (
+                <li
+                  key={e._id}
+                  className="flex items-center justify-between gap-3 py-2.5 text-sm"
+                >
+                  <span>
+                    <span className="block font-medium">
+                      {LEDGER_LABEL[e.type] ?? e.type}
+                    </span>
+                    <span className="text-muted-foreground text-xs">
+                      {formatDate(e.createdAt)}
+                    </span>
+                  </span>
+                  <span
+                    className={
+                      e.amountCents >= 0
+                        ? "text-success font-semibold tabular-nums"
+                        : "font-semibold tabular-nums"
+                    }
                   >
-                    <span>
-                      <span className="block font-medium">
-                        {LEDGER_LABEL[e.type] ?? e.type}
-                      </span>
-                      <span className="text-muted-foreground text-xs">
-                        {formatDate(e.createdAt)}
-                      </span>
-                    </span>
-                    <span
-                      className={
-                        e.amountCents >= 0
-                          ? "text-success font-semibold tabular-nums"
-                          : "font-semibold tabular-nums"
-                      }
-                    >
-                      {e.amountCents >= 0 ? "+" : ""}
-                      {formatUsd(e.amountCents)}
-                    </span>
-                  </li>
-                ),
-              )}
-            </ul>
-          )}
-          <Button asChild variant="ghost" size="sm" className="self-start">
-            <Link href="/dashboard/transactions">View all transactions</Link>
-          </Button>
-        </Panel>
-      </div>
+                    {e.amountCents >= 0 ? "+" : ""}
+                    {formatUsd(e.amountCents)}
+                  </span>
+                </li>
+              ),
+            )}
+          </ul>
+        )}
+        <Button asChild variant="ghost" size="sm" className="self-start">
+          <Link href="/dashboard/transactions">View all transactions</Link>
+        </Button>
+      </Panel>
       {o.pendingDeposits > 0 && (
         <p className="text-muted-foreground text-sm">
           {o.pendingDeposits} deposit{o.pendingDeposits > 1 ? "s" : ""} awaiting

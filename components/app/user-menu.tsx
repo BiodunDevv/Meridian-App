@@ -51,7 +51,7 @@ export function UserMenu({
             {username ? `@${username}` : name || "Account"}
           </span>
           <span className="text-muted-foreground block max-w-36 truncate text-[11px]">
-            {admin ? "Administrator" : "Investor"}
+            {admin ? "Administrator" : "Customer"}
           </span>
         </span>
         <ChevronDown

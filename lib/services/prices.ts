@@ -1,4 +1,5 @@
 import { coinLogo } from "../coins";
+import { log } from "../log";
 
 /** CoinGecko ids for the assets we list. Stablecoins are pegged to 1 USD and need no lookup. */
 const IDS: Record<string, string> = {
@@ -84,10 +85,7 @@ async function refresh() {
     }
     if (Object.keys(prices).length) cache = { at: Date.now(), prices };
   } catch (e) {
-    console.error(
-      "[prices] refresh failed",
-      e instanceof Error ? e.message : e,
-    );
+    log.error("[prices] refresh failed", e instanceof Error ? e.message : e);
   }
 }
 

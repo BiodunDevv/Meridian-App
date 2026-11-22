@@ -1,41 +1,87 @@
-import { BadgePercent, Mail, ScrollText, Wallet } from "lucide-react";
+import {
+  BarChart3,
+  Mail,
+  Package,
+  Plug,
+  Scale,
+  ScrollText,
+  Store,
+  Tag,
+  Wallet,
+  Wrench,
+} from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
 import {
-  saveActivityTickerAction,
   savePaymentSettingsAction,
-  saveReferralSettingsAction,
   testPaymentsAction,
 } from "@/app/actions/admin";
+import { saveShopSettingsAction } from "@/app/actions/catalogue";
 import { CopyField } from "@/components/app/copy-field";
 import { ActionForm, SubmitButton, TextField } from "@/components/app/form";
+import { SettingsNav } from "@/components/app/settings-nav";
+import {
+  SettingsGroup,
+  SettingsRow,
+  SettingsRows,
+} from "@/components/app/settings-ui";
 import { ToastForm } from "@/components/app/toast-form";
-import { PageHeader, Panel } from "@/components/app/ui";
+import { PageHeader } from "@/components/app/ui";
 import { Button } from "@/components/ui/button";
+import { requireAdmin } from "@/lib/auth/guards";
 import { getEnv } from "@/lib/env";
 import {
   paymentsConfigured,
   payoutsConfigured,
 } from "@/lib/payments/nowpayments";
-import { isTickerEnabled } from "@/lib/services/activity";
 import { getPaymentSettings } from "@/lib/services/payments";
-import { getReferralSettings } from "@/lib/services/referrals";
+import { getShopSettings } from "@/lib/services/shop-settings";
 
 export const metadata: Metadata = { title: "Settings" };
 
-const links = [
+const NAV = [
+  { id: "ordering", label: "Ordering", icon: "store" },
+  { id: "payments", label: "Payments", icon: "wallet" },
+  { id: "tools", label: "Tools", icon: "tools" },
+] as const;
+
+const TOOLS = [
+  {
+    href: "/admin/pricing",
+    icon: Tag,
+    title: "Pricing",
+    body: "Markup, minimum margin and the naira rate.",
+  },
+  {
+    href: "/admin/catalogue",
+    icon: Package,
+    title: "Catalogue",
+    body: "Categories, products and what is on sale.",
+  },
+  {
+    href: "/admin/providers",
+    icon: Plug,
+    title: "Providers",
+    body: "Switch providers on or off, sandbox or live.",
+  },
   {
     href: "/admin/payment-methods",
     icon: Wallet,
     title: "Payment methods",
-    body: "Assets, networks and wallet addresses.",
+    body: "Coins, networks and wallet addresses.",
   },
   {
-    href: "/admin/plans",
-    icon: BadgePercent,
-    title: "Plans",
-    body: "Terms, status and order of investment plans.",
+    href: "/admin/reconciliation",
+    icon: Scale,
+    title: "Reconciliation",
+    body: "Check orders against the payment provider.",
+  },
+  {
+    href: "/admin/reports",
+    icon: BarChart3,
+    title: "Reports",
+    body: "Revenue, cost, margin and refund rate.",
   },
   {
     href: "/admin/email-log",
@@ -51,210 +97,310 @@ const links = [
   },
 ];
 
+const Check = ({
+  label,
+  ok,
+  hint,
+}: {
+  label: string;
+  ok: boolean;
+  hint: string;
+}) => (
+  <div className="flex items-start gap-2 rounded-lg border px-3 py-2 text-sm">
+    <span
+      className={`mt-1.5 size-2 shrink-0 rounded-full ${ok ? "bg-success" : "bg-muted-foreground/40"}`}
+    />
+    <span>
+      <span className="font-medium">{label}</span>
+      <span className="text-muted-foreground block text-xs">
+        {ok ? "Connected" : `Set ${hint}`}
+      </span>
+    </span>
+  </div>
+);
+
+const Toggle = ({
+  name,
+  checked,
+  label,
+  hint,
+}: {
+  name: string;
+  checked: boolean;
+  label: string;
+  hint?: string;
+}) => (
+  <label className="flex items-start gap-3 text-sm">
+    <input
+      type="checkbox"
+      name={name}
+      defaultChecked={checked}
+      className="mt-0.5 size-4"
+    />
+    <span>
+      <span className="font-medium">{label}</span>
+      {hint && (
+        <span className="text-muted-foreground mt-0.5 block text-xs">
+          {hint}
+        </span>
+      )}
+    </span>
+  </label>
+);
+
 export default async function AdminSettings() {
-  const [ref, ticker, pay] = await Promise.all([
-    getReferralSettings(),
-    isTickerEnabled(),
+  await requireAdmin();
+  const [pay, shop] = await Promise.all([
     getPaymentSettings(),
+    getShopSettings(),
   ]);
   const env = getEnv();
-  const checks: [string, boolean, string][] = [
-    ["API key", Boolean(env.NOWPAYMENTS_API_KEY), "NOWPAYMENTS_API_KEY"],
-    [
-      "Webhook secret",
-      Boolean(env.NOWPAYMENTS_IPN_SECRET),
-      "NOWPAYMENTS_IPN_SECRET",
-    ],
-    [
-      "Payout login",
-      Boolean(env.NOWPAYMENTS_EMAIL && env.NOWPAYMENTS_PASSWORD),
-      "NOWPAYMENTS_EMAIL and NOWPAYMENTS_PASSWORD",
-    ],
-    [
-      "Payout 2FA",
-      Boolean(env.NOWPAYMENTS_2FA_SECRET),
-      "NOWPAYMENTS_2FA_SECRET",
-    ],
-  ];
+  const mode = paymentsConfigured()
+    ? env.NOWPAYMENTS_SANDBOX === "true"
+      ? "Sandbox (test money only)"
+      : "Live"
+    : "Manual review";
+
   return (
     <>
-      <PageHeader title="Settings" description="Platform configuration." />
+      <PageHeader
+        title="Settings"
+        description="Ordering, payments and the tools you use to run the shop."
+      />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {links.map((l) => (
-          <Panel key={l.href} title={l.title} description={l.body}>
-            <Button asChild variant="outline" size="sm" className="self-start">
-              <Link href={l.href}>
-                <l.icon /> Open
-              </Link>
-            </Button>
-          </Panel>
-        ))}
-      </div>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[200px_minmax(0,1fr)] lg:gap-10">
+        <SettingsNav items={[...NAV]} />
 
-      <Panel
-        title="Online payments"
-        description="Deposits are detected and credited automatically, and withdrawals are paid automatically when they pass the safety checks. Anything else waits for a person."
-      >
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
-          {checks.map(([label, ok, envName]) => (
-            <div
-              key={label}
-              className="flex items-start gap-2 rounded-lg border px-3 py-2 text-sm"
+        <div className="max-w-5xl min-w-0 space-y-10">
+          <SettingsGroup
+            id="ordering"
+            icon={Store}
+            title="Ordering"
+            description="Whether customers can order, and how much and how often. The limits are placeholders until you decide them."
+          >
+            <ActionForm
+              action={saveShopSettingsAction}
+              resetOnSuccess={false}
+              className="gap-4"
             >
-              <span
-                className={`mt-1.5 size-2 shrink-0 rounded-full ${ok ? "bg-success" : "bg-muted-foreground/40"}`}
-              />
-              <span>
-                <span className="font-medium">{label}</span>
-                <span className="text-muted-foreground block text-xs">
-                  {ok ? "Connected" : `Set ${envName}`}
-                </span>
-              </span>
-            </div>
-          ))}
+              <SettingsRows>
+                <SettingsRow
+                  title="Ordering"
+                  description="Open it only when fulfilment is ready. Paid orders wait until the order is placed with the provider."
+                >
+                  <Toggle
+                    name="ordersOpen"
+                    checked={shop.ordersOpen}
+                    label="Ordering is open"
+                    hint="Off by default. Customers see a notice while it is closed."
+                  />
+                </SettingsRow>
+                <SettingsRow
+                  title="Maintenance"
+                  description="Pause new orders for a short time."
+                >
+                  <Toggle
+                    name="maintenance"
+                    checked={shop.maintenance}
+                    label="Maintenance mode"
+                    hint="Everything else keeps running, and orders already placed carry on."
+                  />
+                </SettingsRow>
+                <SettingsRow
+                  title="Daily spending limit"
+                  description="Per customer, over a rolling 24 hours."
+                >
+                  <div className="grid max-w-xl grid-cols-1 gap-4 sm:grid-cols-2">
+                    <TextField
+                      name="tier0"
+                      label="Email verified only (USD)"
+                      type="number"
+                      min="1"
+                      step="0.01"
+                      defaultValue={shop.tier0DailyUsdCents / 100}
+                      required
+                    />
+                    <TextField
+                      name="tier1"
+                      label="Identity verified (USD)"
+                      type="number"
+                      min="1"
+                      step="0.01"
+                      defaultValue={shop.tier1DailyUsdCents / 100}
+                      required
+                    />
+                  </div>
+                </SettingsRow>
+                <SettingsRow
+                  title="Order limits"
+                  description="Keeps one customer from flooding the shop."
+                >
+                  <div className="grid max-w-xl grid-cols-1 gap-4 sm:grid-cols-3">
+                    <TextField
+                      name="perDay"
+                      label="Orders per day"
+                      type="number"
+                      min="1"
+                      defaultValue={shop.maxOrdersPerDay}
+                      required
+                    />
+                    <TextField
+                      name="maxOpen"
+                      label="Unpaid at once"
+                      type="number"
+                      min="1"
+                      defaultValue={shop.maxOpenOrders}
+                      required
+                    />
+                    <TextField
+                      name="windowMin"
+                      label="Payment window (min)"
+                      type="number"
+                      min="10"
+                      max="120"
+                      defaultValue={shop.paymentWindowMin}
+                      required
+                    />
+                  </div>
+                </SettingsRow>
+              </SettingsRows>
+              <div className="flex justify-end">
+                <SubmitButton pending="Saving…">Save ordering</SubmitButton>
+              </div>
+            </ActionForm>
+          </SettingsGroup>
+
+          <SettingsGroup
+            id="payments"
+            icon={Wallet}
+            title="Payments"
+            description="Crypto payments for orders, and the safety limits for automatic payouts."
+          >
+            <SettingsRows>
+              <SettingsRow
+                title="Connection"
+                description={`Mode: ${mode}. ${payoutsConfigured() ? "Automatic payouts are available." : "Without a payout login, payouts stay manual."}`}
+              >
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <Check
+                      label="API key"
+                      ok={Boolean(env.NOWPAYMENTS_API_KEY)}
+                      hint="NOWPAYMENTS_API_KEY"
+                    />
+                    <Check
+                      label="Webhook secret"
+                      ok={Boolean(env.NOWPAYMENTS_IPN_SECRET)}
+                      hint="NOWPAYMENTS_IPN_SECRET"
+                    />
+                    <Check
+                      label="Payout login"
+                      ok={Boolean(
+                        env.NOWPAYMENTS_EMAIL && env.NOWPAYMENTS_PASSWORD,
+                      )}
+                      hint="NOWPAYMENTS_EMAIL and PASSWORD"
+                    />
+                    <Check
+                      label="Payout 2FA"
+                      ok={Boolean(env.NOWPAYMENTS_2FA_SECRET)}
+                      hint="NOWPAYMENTS_2FA_SECRET"
+                    />
+                  </div>
+                  <ToastForm action={testPaymentsAction}>
+                    <SubmitButton
+                      variant="outline"
+                      size="default"
+                      pending="Testing…"
+                    >
+                      Test connection
+                    </SubmitButton>
+                  </ToastForm>
+                </div>
+              </SettingsRow>
+              <SettingsRow
+                title="Callback address"
+                description="Paste this into your payment provider's IPN settings. It needs a public https address."
+              >
+                <CopyField
+                  label="Webhook URL"
+                  value={`${env.NEXT_PUBLIC_SITE_URL}/api/webhooks/payments`}
+                  mono
+                />
+              </SettingsRow>
+            </SettingsRows>
+
+            <ActionForm
+              action={savePaymentSettingsAction}
+              resetOnSuccess={false}
+              className="gap-4"
+            >
+              <SettingsRows>
+                <SettingsRow
+                  title="Automatic payouts"
+                  description="Refunds to crypto and withdrawals are paid by themselves only when every check passes. Anything above these limits waits for a person."
+                >
+                  <div className="space-y-5">
+                    <div className="grid max-w-xl grid-cols-1 gap-4 sm:grid-cols-3">
+                      <TextField
+                        name="maxUsd"
+                        label="Per payout (USD)"
+                        type="number"
+                        min="1"
+                        defaultValue={pay.maxUsd}
+                        required
+                      />
+                      <TextField
+                        name="dailyUsd"
+                        label="Per user per day (USD)"
+                        type="number"
+                        min="1"
+                        defaultValue={pay.dailyUsd}
+                        required
+                      />
+                      <TextField
+                        name="newAddressMaxUsd"
+                        label="New address (USD)"
+                        type="number"
+                        min="1"
+                        defaultValue={pay.newAddressMaxUsd}
+                        required
+                      />
+                    </div>
+                    <Toggle
+                      name="autoWithdraw"
+                      checked={pay.autoWithdraw}
+                      label="Pay automatically"
+                      hint="Turn off to send every payout to the review queue."
+                    />
+                  </div>
+                </SettingsRow>
+              </SettingsRows>
+              <div className="flex justify-end">
+                <SubmitButton pending="Saving…">Save payments</SubmitButton>
+              </div>
+            </ActionForm>
+          </SettingsGroup>
+
+          <SettingsGroup
+            id="tools"
+            icon={Wrench}
+            title="Tools"
+            description="Everything else you use to run the shop."
+          >
+            <SettingsRows>
+              {TOOLS.map((t) => (
+                <SettingsRow key={t.href} title={t.title} description={t.body}>
+                  <Button asChild variant="outline" size="sm">
+                    <Link href={t.href}>
+                      <t.icon /> Open
+                    </Link>
+                  </Button>
+                </SettingsRow>
+              ))}
+            </SettingsRows>
+          </SettingsGroup>
         </div>
-        <p className="text-muted-foreground text-xs">
-          Mode:{" "}
-          {paymentsConfigured()
-            ? env.NOWPAYMENTS_SANDBOX === "true"
-              ? "sandbox (test money only)"
-              : "live"
-            : "manual review"}
-          .
-          {payoutsConfigured()
-            ? " Automatic payouts are available."
-            : " Without a payout login, withdrawals stay manual."}
-        </p>
-        <CopyField
-          label="Webhook URL (paste into your provider's IPN settings)"
-          value={`${env.NEXT_PUBLIC_SITE_URL}/api/webhooks/payments`}
-          mono
-        />
-        <ToastForm action={testPaymentsAction}>
-          <SubmitButton variant="outline" size="default" pending="Testing…">
-            Test connection
-          </SubmitButton>
-        </ToastForm>
-        <ActionForm
-          action={savePaymentSettingsAction}
-          className="grid max-w-2xl grid-cols-1 gap-4 sm:grid-cols-3"
-          resetOnSuccess={false}
-        >
-          <TextField
-            name="maxUsd"
-            label="Per withdrawal limit (USD)"
-            type="number"
-            min="1"
-            defaultValue={pay.maxUsd}
-            required
-            hint="Above this, a person checks it."
-          />
-          <TextField
-            name="dailyUsd"
-            label="Daily limit per user (USD)"
-            type="number"
-            min="1"
-            defaultValue={pay.dailyUsd}
-            required
-          />
-          <TextField
-            name="newAddressMaxUsd"
-            label="New address limit (USD)"
-            type="number"
-            min="1"
-            defaultValue={pay.newAddressMaxUsd}
-            required
-            hint="First payout to an address."
-          />
-          <label className="flex items-center gap-2 text-sm sm:col-span-2">
-            <input
-              type="checkbox"
-              name="autoWithdraw"
-              defaultChecked={pay.autoWithdraw}
-              className="size-4"
-            />{" "}
-            Pay withdrawals automatically
-          </label>
-          <div className="sm:justify-self-end">
-            <SubmitButton pending="Saving…">Save</SubmitButton>
-          </div>
-        </ActionForm>
-      </Panel>
-
-      <Panel
-        title="Referral programme"
-        description="Users earn a reward when someone they invited makes their first qualifying deposit. Rewards are credited once per referred user."
-      >
-        <ActionForm
-          action={saveReferralSettingsAction}
-          className="grid max-w-2xl grid-cols-1 gap-4 sm:grid-cols-3"
-          resetOnSuccess={false}
-        >
-          <TextField
-            name="pct"
-            label="Reward (%)"
-            type="number"
-            step="0.1"
-            min="0"
-            defaultValue={ref.pct}
-            required
-            hint="Of the first deposit."
-          />
-          <TextField
-            name="capUsd"
-            label="Cap per referral (USD)"
-            type="number"
-            min="1"
-            defaultValue={ref.capUsd}
-            required
-          />
-          <TextField
-            name="minDepositUsd"
-            label="Minimum deposit (USD)"
-            type="number"
-            min="1"
-            defaultValue={ref.minDepositUsd}
-            required
-          />
-          <label className="flex items-center gap-2 text-sm sm:col-span-2">
-            <input
-              type="checkbox"
-              name="enabled"
-              defaultChecked={ref.enabled}
-              className="size-4"
-            />{" "}
-            Programme is on
-          </label>
-          <div className="sm:justify-self-end">
-            <SubmitButton pending="Saving…">Save</SubmitButton>
-          </div>
-        </ActionForm>
-      </Panel>
-
-      <Panel
-        title="Recent activity ticker"
-        description="A slim strip across the top of the investor app showing real recent activity (paid withdrawals, profit credited and confirmed deposits) with masked usernames such as j***n. It only shows real events from the last two weeks, and stays hidden when there are fewer than three."
-      >
-        <ActionForm
-          action={saveActivityTickerAction}
-          className="max-w-md"
-          resetOnSuccess={false}
-        >
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              name="enabled"
-              defaultChecked={ticker}
-              className="size-4"
-            />{" "}
-            Show the ticker to investors
-          </label>
-          <SubmitButton pending="Saving…" className="self-start">
-            Save
-          </SubmitButton>
-        </ActionForm>
-      </Panel>
+      </div>
     </>
   );
 }

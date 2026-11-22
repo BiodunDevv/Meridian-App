@@ -28,9 +28,7 @@ export const metadata: Metadata = { title: "Transactions" };
 
 const related = (e: { refType?: string; refId?: string }) => {
   if (!e.refId) return null;
-  if (e.refType === "deposit") return `/dashboard/deposit/${e.refId}`;
-  if (e.refType === "withdrawal") return `/dashboard/withdraw/${e.refId}`;
-  if (e.refType === "investment") return `/dashboard/investments/${e.refId}`;
+  if (e.refType === "order") return `/dashboard/orders/${e.refId}`;
   return null;
 };
 
@@ -46,18 +44,18 @@ export default async function TransactionsPage() {
   return (
     <>
       <PageHeader
-        title="Transactions"
-        description="Every deposit, investment, payout and withdrawal, with a running balance."
+        title="Store credit"
+        description="Refunds and adjustments, with a running balance."
       />
       <Panel>
         {rows.length === 0 ? (
           <EmptyState
             icon={Receipt}
-            title="Your ledger starts with your first deposit"
-            body="Every deposit, investment, payout and withdrawal is recorded here with a running balance."
+            title="No store credit activity yet"
+            body="Store credit from refunds and any adjustments appear here with a running balance. You pay for orders in crypto, one order at a time."
             action={
               <Button asChild size="sm">
-                <Link href="/dashboard/deposit">Make a deposit</Link>
+                <Link href="/dashboard/shop">Start shopping</Link>
               </Button>
             }
           />

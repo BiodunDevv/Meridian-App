@@ -16,6 +16,7 @@ import {
   parseParams,
   queryResource,
 } from "@/lib/admin/resources";
+import { requireAdmin } from "@/lib/auth/guards";
 import { formatDateTime } from "@/lib/money";
 
 export const metadata: Metadata = { title: "Audit log" };
@@ -33,7 +34,6 @@ const GROUPS = [
   "withdrawal",
   "kyc",
   "user",
-  "plan",
   "asset",
   "network",
   "wallet",
@@ -47,6 +47,7 @@ export default async function AuditPage({
 }: {
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
+  await requireAdmin();
   const params = parseParams(await searchParams);
   const { rows, total, page, pages, pageSize } = await queryResource(
     "audit",
@@ -75,7 +76,7 @@ export default async function AuditPage({
         {data.length === 0 ? (
           <EmptyState
             title="No activity yet"
-            body="Approvals, plan edits and wallet changes are logged here."
+            body="Approvals, settings changes and wallet changes are logged here."
           />
         ) : (
           <Table>

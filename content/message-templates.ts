@@ -27,14 +27,6 @@ export const BUILT_IN_TEMPLATES: MessageTemplateDef[] = [
     audience: "Never deposited",
   },
   {
-    key: "choose-plan",
-    category: "Onboarding",
-    name: "Choose an investment plan",
-    subject: "Your balance is ready. Pick a plan.",
-    body: "Hi {{firstName}},\n\nYour deposit is confirmed and your balance is available. You can now compare plans by minimum, term and projected return before you invest.\n\nProjected returns are illustrative and not guaranteed. Your capital is at risk.",
-    audience: "Have deposited",
-  },
-  {
     key: "kyc-reminder",
     category: "Account",
     name: "Verify your identity",
@@ -51,14 +43,6 @@ export const BUILT_IN_TEMPLATES: MessageTemplateDef[] = [
     audience: "Two-step login off",
   },
   {
-    key: "new-plan",
-    category: "Product",
-    name: "New plan announcement",
-    subject: "A new investment plan is available",
-    body: "Hi {{firstName}},\n\nWe have added a new plan. Every plan shows its minimum, maximum, term and projected return up front, so you can compare before you commit.\n\nProjected returns are illustrative and not guaranteed. Your capital is at risk.",
-    audience: "All users",
-  },
-  {
     key: "deposit-address-update",
     category: "Operations",
     name: "Deposit address updated",
@@ -71,7 +55,7 @@ export const BUILT_IN_TEMPLATES: MessageTemplateDef[] = [
     category: "Operations",
     name: "Scheduled maintenance",
     subject: "Scheduled maintenance notice",
-    body: "Hi {{firstName}},\n\nWe will carry out scheduled maintenance. During this window the dashboard may be unavailable and deposit and withdrawal reviews may be delayed.\n\nYour balance and investments are not affected. Thank you for your patience.",
+    body: "Hi {{firstName}},\n\nWe will carry out scheduled maintenance. During this window the dashboard may be unavailable and deposit and withdrawal reviews may be delayed.\n\nYour balance and account are not affected. Thank you for your patience.",
     audience: "All users",
   },
   {

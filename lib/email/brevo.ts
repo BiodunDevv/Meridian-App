@@ -1,5 +1,6 @@
 import { connectDb } from "../db";
 import { getEnv, isDbConfigured } from "../env";
+import { log } from "../log";
 import { EmailLog, User } from "../models";
 
 export interface EmailInput {
@@ -52,7 +53,7 @@ async function deliver(
     });
     if (!res.ok) {
       const body = await res.text();
-      console.error("[email] Brevo error", res.status, body);
+      log.error("[email] Brevo error", res.status, body);
       // 4xx (except 408/429) will not succeed on retry. 5xx, 429 and timeouts will.
       const retryable =
         res.status >= 500 || res.status === 429 || res.status === 408;
@@ -151,7 +152,7 @@ export async function sendEmail(input: EmailInput) {
       ? { ok: true as const }
       : { ok: false as const, error: r.error };
   } catch (e) {
-    console.error("[email] send failed", e);
+    log.error("[email] send failed", e);
     return {
       ok: false as const,
       error: e instanceof Error ? e.message : "send failed",

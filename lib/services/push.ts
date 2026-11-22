@@ -2,6 +2,7 @@ import * as webpush from "web-push";
 
 import { connectDb } from "../db";
 import { getEnv } from "../env";
+import { log } from "../log";
 import { PushSubscription } from "../models";
 
 export interface PushPayload {
@@ -60,14 +61,14 @@ export async function sendPush(userIds: string[], payload: PushPayload) {
             const code = (e as { statusCode?: number }).statusCode;
             if (code === 404 || code === 410)
               await PushSubscription.deleteOne({ _id: s._id });
-            else console.error("[push] failed", code ?? e);
+            else log.error("[push] failed", code ?? e);
           }
         }),
       );
     }
     return { sent };
   } catch (e) {
-    console.error("[push] error", e);
+    log.error("[push] error", e);
     return { sent: 0 };
   }
 }

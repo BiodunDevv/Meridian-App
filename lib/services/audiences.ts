@@ -2,7 +2,7 @@ export const AUDIENCES = [
   {
     key: "all",
     label: "All active users",
-    hint: "Every verified, active investor",
+    hint: "Every verified, active customer",
   },
   { key: "kyc_approved", label: "Identity verified", hint: "KYC approved" },
   {
@@ -20,11 +20,6 @@ export const AUDIENCES = [
     key: "unfunded",
     label: "Never deposited",
     hint: "No confirmed deposit yet",
-  },
-  {
-    key: "investing",
-    label: "Active investors",
-    hint: "At least one active investment",
   },
   {
     key: "no_mfa",

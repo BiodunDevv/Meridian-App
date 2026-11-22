@@ -4,9 +4,9 @@ import { brand } from "@/content/site";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: `${brand.name} Investor`,
+    name: brand.name,
     short_name: brand.name,
-    description: "Fund your balance, choose a plan and follow your portfolio.",
+    description: "Pay for airtime, data, electricity and cable TV with crypto.",
     id: "/dashboard",
     start_url: "/dashboard",
     scope: "/",
@@ -37,13 +37,8 @@ export default function manifest(): MetadataRoute.Manifest {
     ],
     shortcuts: [
       {
-        name: "Deposit",
-        url: "/dashboard/deposit",
-        icons: [{ src: "/pwa-icon/192", sizes: "192x192" }],
-      },
-      {
-        name: "Investments",
-        url: "/dashboard/investments",
+        name: "Orders",
+        url: "/dashboard/orders",
         icons: [{ src: "/pwa-icon/192", sizes: "192x192" }],
       },
     ],

@@ -1,6 +1,15 @@
 "use client";
 
-import { Bell, Fingerprint, Laptop, ShieldCheck, User } from "lucide-react";
+import {
+  Bell,
+  Fingerprint,
+  Laptop,
+  ShieldCheck,
+  Store,
+  User,
+  Wallet,
+  Wrench,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { cn } from "@/lib/utils";
@@ -11,6 +20,9 @@ const ICONS = {
   identity: Fingerprint,
   bell: Bell,
   devices: Laptop,
+  store: Store,
+  wallet: Wallet,
+  tools: Wrench,
 };
 
 /** Icons are passed by name, because a server page cannot hand component functions to a client component. */

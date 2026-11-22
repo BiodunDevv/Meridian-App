@@ -72,7 +72,6 @@ const tones: Record<string, string> = {
   pending: "border-gold/50 text-gold-foreground bg-gold/10",
   approved: "border-success/40 text-success bg-success/10",
   paid: "border-success/40 text-success bg-success/10",
-  matured: "border-success/40 text-success bg-success/10",
   active: "border-brand/40 text-brand bg-brand/10",
   rejected:
     "border-destructive-foreground/40 text-destructive-foreground bg-destructive-foreground/10",
@@ -82,6 +81,14 @@ const tones: Record<string, string> = {
   awaiting: "border-brand/40 text-brand bg-brand/10",
   processing: "border-brand/40 text-brand bg-brand/10",
   expired: "text-muted-foreground",
+  awaiting_payment: "border-brand/40 text-brand bg-brand/10",
+  fulfilling: "border-brand/40 text-brand bg-brand/10",
+  delivered: "border-success/40 text-success bg-success/10",
+  review: "border-gold/50 text-gold-foreground bg-gold/10",
+  created: "text-muted-foreground",
+  failed:
+    "border-destructive-foreground/40 text-destructive-foreground bg-destructive-foreground/10",
+  refunded: "text-muted-foreground",
   cancelled: "text-muted-foreground",
 };
 
@@ -281,11 +288,8 @@ export function Panel({
 
 export const LEDGER_LABEL: Record<string, string> = {
   deposit: "Deposit",
-  investment: "Investment",
-  profit: "Profit payout",
-  principal_return: "Principal returned",
   withdrawal_hold: "Withdrawal",
   withdrawal_refund: "Withdrawal refund",
   adjustment: "Adjustment",
-  referral_bonus: "Referral reward",
+  order_refund: "Order refund",
 };

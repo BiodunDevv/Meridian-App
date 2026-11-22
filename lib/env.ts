@@ -1,5 +1,11 @@
 import { z } from "zod";
 
+/** A key left as the text "null" or "undefined" (a common paste slip) counts as empty. */
+const key = z
+  .string()
+  .default("")
+  .transform((v) => (/^\s*(null|undefined)\s*$/i.test(v) ? "" : v.trim()));
+
 const schema = z.object({
   MONGODB_URI: z.string().default(""),
   AUTH_SECRET: z.string().min(16, "AUTH_SECRET must be at least 16 characters"),
@@ -32,6 +38,22 @@ const schema = z.object({
   NOWPAYMENTS_EMAIL: z.string().default(""),
   NOWPAYMENTS_PASSWORD: z.string().default(""),
   NOWPAYMENTS_2FA_SECRET: z.string().default(""),
+  /**
+   * Fulfilment providers. Sandbox and live keys are separate, so switching a provider to live in the admin
+   * needs no code change: add the live keys here first. Never commit these.
+   */
+  /** One set of keys for whichever mode is selected (optional). The mode-specific names below win if set. */
+  VTPASS_API_KEY: key,
+  VTPASS_PUBLIC_KEY: key,
+  VTPASS_SECRET_KEY: key,
+  VTPASS_SANDBOX_API_KEY: key,
+  VTPASS_SANDBOX_PUBLIC_KEY: key,
+  VTPASS_SANDBOX_SECRET_KEY: key,
+  VTPASS_LIVE_API_KEY: key,
+  VTPASS_LIVE_PUBLIC_KEY: key,
+  VTPASS_LIVE_SECRET_KEY: key,
+  /** VTpass has no signature on callbacks, so the callback URL carries this secret. */
+  VTPASS_WEBHOOK_SECRET: key,
   AUTO_WITHDRAW_MAX_USD: z.coerce.number().positive().default(500),
   AUTO_WITHDRAW_DAILY_USD: z.coerce.number().positive().default(2000),
   AUTO_WITHDRAW_NEW_ADDRESS_MAX_USD: z.coerce.number().positive().default(100),

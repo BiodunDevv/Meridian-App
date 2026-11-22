@@ -67,9 +67,9 @@ export const emails = {
         {
           t: "details",
           rows: [
-            ["Step 1", "Make your first deposit"],
-            ["Step 2", "Choose an investment plan"],
-            ["Step 3", "Verify your identity to withdraw"],
+            ["Step 1", "Secure your account with two-step login"],
+            ["Step 2", "Verify your identity for higher limits"],
+            ["Step 3", "Shop for airtime, data, electricity and cable TV"],
           ],
         },
         { t: "button", label: "Open dashboard", url: absUrl("/dashboard") },
@@ -193,7 +193,7 @@ export const emails = {
         {
           t: "button",
           label: "View deposits",
-          url: absUrl("/dashboard/deposit"),
+          url: absUrl("/dashboard/transactions"),
         },
       ],
     }),
@@ -213,7 +213,7 @@ export const emails = {
         { t: "h", text: "Your deposit is confirmed" },
         {
           t: "p",
-          text: `We confirmed your payment and added **${d.amount}** to your available balance. It is ready to invest.`,
+          text: `We confirmed your payment and added **${d.amount}** to your available balance. It is ready to use.`,
         },
         {
           t: "details",
@@ -238,11 +238,7 @@ export const emails = {
               },
             ] as Block[])
           : []),
-        {
-          t: "button",
-          label: "Choose a plan",
-          url: absUrl("/dashboard/investments"),
-        },
+        { t: "button", label: "Open dashboard", url: absUrl("/dashboard") },
         {
           t: "small",
           text: "Questions about this payment? Reply to this email or open a support ticket from your dashboard.",
@@ -264,65 +260,101 @@ export const emails = {
         {
           t: "button",
           label: "View deposits",
-          url: absUrl("/dashboard/deposit"),
+          url: absUrl("/dashboard/transactions"),
         },
       ],
     }),
 
-  /* ---------- Investments ---------- */
-  investmentStarted: (
-    plan: string,
-    amount: string,
-    days: number,
-    matures: string,
-  ): Mail =>
-    mail(`Your ${plan} investment has started`, {
-      preheader: `${amount} invested for ${days} days.`,
+  /* ---------- Orders ---------- */
+  orderPaid: (o: {
+    number: string;
+    product: string;
+    amount: string;
+    path: string;
+  }): Mail =>
+    mail(`Payment received for ${o.number}`, {
+      preheader: `We received your payment for ${o.product}.`,
       blocks: [
-        { t: "h", text: "Investment started" },
+        { t: "h", text: "Payment received" },
         {
           t: "p",
-          text: "Your investment is active. Profit is added every day and compounds on the running balance. Your principal and profit are locked until the end date, then credited to your available balance.",
+          text: `We received your crypto payment for **${o.product}**. We are now placing your order with our provider. Delivery time depends on the item and the provider, and we do not promise a time.`,
         },
         {
           t: "details",
           rows: [
-            ["Plan", plan],
-            ["Amount", amount],
-            ["Term", `${days} days`],
-            ["Locked until", matures],
+            ["Order", o.number],
+            ["Item", o.product],
+            ["Price", o.amount],
           ],
         },
+        { t: "button", label: "View order", url: absUrl(o.path) },
         {
-          t: "callout",
-          tone: "info",
-          text: "Projected returns are illustrative and not guaranteed. Your capital is at risk.",
-        },
-        {
-          t: "button",
-          label: "View investments",
-          url: absUrl("/dashboard/investments"),
+          t: "small",
+          text: "If we cannot deliver, you will get a refund as store credit. Crypto payments themselves are final once confirmed.",
         },
       ],
     }),
 
-  investmentMatured: (plan: string, payout: string): Mail =>
-    mail(`Your ${plan} investment has matured`, {
-      preheader: `${payout} was credited to your balance.`,
+  orderNeedsReview: (o: {
+    number: string;
+    product: string;
+    reason: string;
+    path: string;
+  }): Mail =>
+    mail(`We are checking your order ${o.number}`, {
+      preheader: "Your order needs a quick check by our team.",
       blocks: [
-        { t: "h", text: "Investment matured" },
+        { t: "h", text: "Your order is being checked" },
         {
           t: "p",
-          text: `Your **${plan}** investment has matured. The principal and profit were credited to your available balance.`,
+          text: `Your order for **${o.product}** needs a check by our team before we can go on. ${o.reason}`,
         },
+        { t: "button", label: "View order", url: absUrl(o.path) },
         {
-          t: "details",
-          rows: [
-            ["Plan", plan],
-            ["Credited", payout],
-          ],
+          t: "small",
+          text: "You do not need to pay again. If you have questions, open a support ticket and mention the order number.",
         },
-        { t: "button", label: "Open dashboard", url: absUrl("/dashboard") },
+      ],
+    }),
+
+  orderDelivered: (o: {
+    number: string;
+    product: string;
+    path: string;
+    note?: string;
+  }): Mail =>
+    mail(`Your order ${o.number} was delivered`, {
+      preheader: `${o.product} was delivered.`,
+      blocks: [
+        { t: "h", text: "Your order was delivered" },
+        {
+          t: "p",
+          text: `Your order for **${o.product}** was delivered. ${o.note ?? "If it came with a code or token, open the order page to see it. We do not put codes in email."}`,
+        },
+        { t: "button", label: "View order", url: absUrl(o.path) },
+      ],
+    }),
+
+  orderRefunded: (o: {
+    number: string;
+    product: string;
+    amount: string;
+    path: string;
+  }): Mail =>
+    mail(`Order ${o.number} refunded to store credit`, {
+      preheader: `${o.amount} was added to your store credit.`,
+      blocks: [
+        { t: "h", text: "We could not deliver, so we refunded you" },
+        {
+          t: "p",
+          text: `We were not able to deliver **${o.product}**. We added **${o.amount}** to your store credit, and you can use it on a later order.`,
+        },
+        { t: "button", label: "View order", url: absUrl(o.path) },
+        {
+          t: "small",
+          text: "If you would rather have a crypto refund, open a support ticket and mention the order number. We decide these case by case.",
+        },
       ],
     }),
 
@@ -397,79 +429,6 @@ export const emails = {
       ],
     }),
 
-  investmentReinvested: (
-    plan: string,
-    payout: string,
-    nextPlan: string,
-    amount: string,
-    termDays: number,
-    matures: string,
-  ): Mail =>
-    mail(`${plan} matured and was reinvested`, {
-      preheader: `${amount} went into ${nextPlan}.`,
-      blocks: [
-        { t: "h", text: "Matured and reinvested" },
-        {
-          t: "p",
-          text: `Your **${plan}** investment matured with a total of **${payout}**, and you had asked us to reinvest automatically.`,
-        },
-        {
-          t: "details",
-          rows: [
-            ["Reinvested", amount],
-            ["Plan", nextPlan],
-            ["Term", `${termDays} days`],
-            ["Matures", matures],
-          ],
-        },
-        {
-          t: "callout",
-          tone: "info",
-          text: "You can turn automatic reinvestment off for any active investment in your dashboard. Projected returns are illustrative and not guaranteed.",
-        },
-        {
-          t: "button",
-          label: "View investments",
-          url: absUrl("/dashboard/investments"),
-        },
-      ],
-    }),
-
-  investmentOffer: (
-    current: string,
-    days: number,
-    next: string,
-    range: string,
-    termDays: number,
-    pct: number,
-    path: string,
-  ): Mail =>
-    mail(`A new offer for you: ${next}`, {
-      preheader: `You are ${days} days into ${current}. See what ${next} offers.`,
-      blocks: [
-        { t: "h", text: "Ready for the next step?" },
-        {
-          t: "p",
-          text: `You are ${days} days into your **${current}** plan. Here is the next tier up, in case you want to put more to work.`,
-        },
-        {
-          t: "details",
-          rows: [
-            ["Plan", next],
-            ["Amount", range],
-            ["Term", `${termDays} days`],
-            ["Projected return", `${pct}% (illustrative)`],
-          ],
-        },
-        { t: "button", label: `View ${next}`, url: absUrl(path) },
-        {
-          t: "callout",
-          tone: "info",
-          text: "Projected returns are illustrative and not guaranteed. Your capital is at risk.",
-        },
-      ],
-    }),
-
   /* ---------- Identity ---------- */
   kycReceived: (): Mail =>
     mail("We received your verification", {
@@ -502,7 +461,7 @@ export const emails = {
             {
               t: "button",
               label: "Request a withdrawal",
-              url: absUrl("/dashboard/withdraw"),
+              url: absUrl("/dashboard/transactions"),
             },
           ],
         })
@@ -598,23 +557,6 @@ export const emails = {
           : []),
       ],
       reason: `You received this email because you are an ${brand.name} administrator.`,
-    }),
-
-  referralReward: (amount: string): Mail =>
-    mail("You earned a referral reward", {
-      preheader: `${amount} was added to your balance.`,
-      blocks: [
-        { t: "h", text: "Referral reward" },
-        {
-          t: "p",
-          text: `A friend you invited made their first deposit, so **${amount}** was credited to your available balance.`,
-        },
-        {
-          t: "button",
-          label: "See your referrals",
-          url: absUrl("/dashboard/referrals"),
-        },
-      ],
     }),
 
   /* ---------- Support ---------- */

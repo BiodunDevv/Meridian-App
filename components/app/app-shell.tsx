@@ -29,7 +29,7 @@ export function AppShell({
   children,
 }: {
   user: SessionUser;
-  variant: "investor" | "admin";
+  variant: "customer" | "admin";
   unread?: number;
   badges?: Record<string, number>;
   /** Hold the install modal back while another first-run prompt is showing. */
@@ -37,12 +37,12 @@ export function AppShell({
   ticker?: React.ReactNode;
   children: React.ReactNode;
 }) {
-  const Wrap = variant === "investor" ? InstallProvider : Fragment;
+  const Wrap = variant === "customer" ? InstallProvider : Fragment;
   return (
     <Wrap>
       <div className="overflow-hidden pt-[env(safe-area-inset-top)]">
         <SidebarProvider className="relative h-svh">
-          <AppSidebar variant={variant} badges={badges} />
+          <AppSidebar variant={variant} badges={badges} role={user.role} />
           <SidebarInset className="min-w-0 md:peer-data-[variant=inset]:ml-0">
             {ticker}
             <OnlineStatus />
@@ -54,7 +54,7 @@ export function AppShell({
               </div>
               <div className="flex items-center gap-1.5">
                 <ModeToggle />
-                {variant === "investor" && (
+                {variant === "customer" && (
                   <Link
                     href="/dashboard/notifications"
                     aria-label={`Notifications${unread ? `, ${unread} unread` : ""}`}
@@ -80,11 +80,11 @@ export function AppShell({
             </header>
             <main
               id="main"
-              className={`flex min-w-0 flex-1 flex-col gap-6 overflow-x-hidden overflow-y-auto p-4 md:p-6 [&>*]:shrink-0 ${variant === "investor" ? "pb-28 md:pb-6" : ""}`}
+              className={`flex min-w-0 flex-1 flex-col gap-6 overflow-x-hidden overflow-y-auto p-4 md:p-6 [&>*]:shrink-0 ${variant === "customer" ? "pb-28 md:pb-6" : ""}`}
             >
               {children}
             </main>
-            {variant === "investor" && (
+            {variant === "customer" && (
               <>
                 <MobileNav />
                 <RegisterServiceWorker />

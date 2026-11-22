@@ -24,18 +24,13 @@ export default async function RegisterPage({
       footer={
         <>
           Already have an account?{" "}
-          <Link
-            href={sp.plan ? `/login?plan=${sp.plan}` : "/login"}
-            className={authLink}
-          >
+          <Link href="/login" className={authLink}>
             Log in
           </Link>
         </>
       }
     >
       <ActionForm action={registerAction} resetOnSuccess={false}>
-        <input type="hidden" name="plan" value={sp.plan ?? ""} />
-        <input type="hidden" name="ref" value={sp.ref ?? ""} />
         <input type="hidden" name="name" value="" />
         <TextField
           name="email"

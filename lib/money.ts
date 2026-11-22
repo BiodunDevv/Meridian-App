@@ -21,3 +21,10 @@ export const formatDateTime = (d: Date | string | number) =>
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(d));
+
+/** Formats a minor-unit amount (kobo or cents) in its own currency. Safe to import in client components. */
+export const formatMinor = (minor: number, currency: "NGN" | "USD") =>
+  new Intl.NumberFormat(currency === "NGN" ? "en-NG" : "en-US", {
+    style: "currency",
+    currency,
+  }).format(minor / 100);

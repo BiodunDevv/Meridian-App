@@ -21,6 +21,7 @@ import {
   parseParams,
   queryResource,
 } from "@/lib/admin/resources";
+import { requireAdmin } from "@/lib/auth/guards";
 import { connectDb } from "@/lib/db";
 import { EmailLog } from "@/lib/models";
 import { formatDateTime } from "@/lib/money";
@@ -57,6 +58,7 @@ export default async function EmailLogPage({
 }: {
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
+  await requireAdmin();
   const params = parseParams(await searchParams);
   await connectDb();
   const [{ rows, total, page, pages, pageSize }, queued, bounced, complaints] =

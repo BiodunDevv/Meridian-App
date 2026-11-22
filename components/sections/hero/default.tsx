@@ -1,9 +1,9 @@
 import { ArrowRightIcon } from "lucide-react";
 
-import { hero, type PlanContent } from "@/content/site";
+import { hero } from "@/content/site";
 import { cn } from "@/lib/utils";
 
-import { InvestorDashboard } from "../../mockups/investor-dashboard";
+import { OrderStatusMockup } from "../../mockups/order-status";
 import { Badge } from "../../ui/badge";
 import Glow from "../../ui/glow";
 import { KineticText } from "../../ui/kinetic-text";
@@ -11,13 +11,7 @@ import { Mockup, MockupFrame } from "../../ui/mockup";
 import { Section } from "../../ui/section";
 import HeroActions from "./hero-actions";
 
-export default function Hero({
-  className,
-  plans,
-}: {
-  className?: string;
-  plans: PlanContent[];
-}) {
+export default function Hero({ className }: { className?: string }) {
   return (
     <Section
       aria-labelledby="hero-title"
@@ -57,9 +51,9 @@ export default function Hero({
             {hero.description}
           </p>
           <div className="animate-appear relative z-10 w-full opacity-0 delay-300">
-            <HeroActions plans={plans} />
+            <HeroActions />
           </div>
-          <div className="relative w-full pt-8 sm:pt-12">
+          <div className="relative mx-auto w-full max-w-xl pt-8 sm:pt-12">
             <p className="sr-only">{hero.mockupAlt}</p>
             <MockupFrame
               className="animate-appear opacity-0 delay-700"
@@ -71,7 +65,7 @@ export default function Hero({
                 aria-hidden="true"
                 inert
               >
-                <InvestorDashboard />
+                <OrderStatusMockup />
               </Mockup>
             </MockupFrame>
             <Glow

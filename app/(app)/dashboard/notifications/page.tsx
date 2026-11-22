@@ -24,7 +24,7 @@ export default async function NotificationsPage() {
     <>
       <PageHeader
         title="Notifications"
-        description="Updates on deposits, investments and withdrawals."
+        description="Updates on payments, orders and your account."
         action={
           rows.some((n: { readAt?: string }) => !n.readAt) ? (
             <form action={markNotificationsReadAction}>
@@ -40,7 +40,7 @@ export default async function NotificationsPage() {
           <EmptyState
             variant="done"
             title="You are all caught up"
-            body="We will let you know when a deposit is confirmed or a withdrawal is paid."
+            body="We will let you know when an order is paid, delivered or refunded."
           />
         ) : (
           <ul className="divide-y">

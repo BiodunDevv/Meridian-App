@@ -39,7 +39,7 @@ export default function Image() {
           display: "flex",
         }}
       >
-        Invest smarter.
+        Spend your crypto.
       </div>
       <div
         style={{
@@ -50,10 +50,10 @@ export default function Image() {
           display: "flex",
         }}
       >
-        See every move.
+        On everyday bills.
       </div>
       <div style={{ marginTop: 28, fontSize: 28, color: "#9aa6c8" }}>
-        Fund with crypto · Choose a plan · Track growth
+        Airtime · Data · Electricity · Cable TV
       </div>
     </div>,
     { ...size },

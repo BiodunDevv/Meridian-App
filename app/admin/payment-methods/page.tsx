@@ -35,6 +35,7 @@ import {
   StatusBadge,
 } from "@/components/app/ui";
 import { Button } from "@/components/ui/button";
+import { requireAdmin } from "@/lib/auth/guards";
 import { ASSET_SUGGESTIONS } from "@/lib/coins";
 import { connectDb } from "@/lib/db";
 import { Asset } from "@/lib/models";
@@ -61,6 +62,7 @@ export default async function PaymentMethods({
 }: {
   searchParams: Promise<{ q?: string; view?: string }>;
 }) {
+  await requireAdmin();
   const sp = await searchParams;
   await connectDb();
   const all = plain(

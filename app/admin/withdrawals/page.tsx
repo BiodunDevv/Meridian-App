@@ -27,6 +27,7 @@ import {
   parseParams,
   queryResource,
 } from "@/lib/admin/resources";
+import { requireAdmin } from "@/lib/auth/guards";
 import { coinLogo } from "@/lib/coins";
 import { connectDb } from "@/lib/db";
 import { Withdrawal } from "@/lib/models";
@@ -89,6 +90,7 @@ export default async function AdminWithdrawals({
 }: {
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
+  await requireAdmin();
   const params = parseParams(await searchParams);
   await connectDb();
   // eslint-disable-next-line react-hooks/purity -- server component, evaluated per request

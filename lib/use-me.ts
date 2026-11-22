@@ -6,7 +6,7 @@ export interface Me {
   email: string;
   username: string;
   name: string;
-  role: "investor" | "admin";
+  role: "investor" | "staff" | "admin";
 }
 
 const noop = () => () => {};
@@ -48,6 +48,7 @@ export function useMe() {
   return {
     signedIn,
     me: me ?? null,
-    dashboardHref: me?.role === "admin" ? "/admin" : "/dashboard",
+    dashboardHref:
+      me?.role === "admin" || me?.role === "staff" ? "/admin" : "/dashboard",
   };
 }

@@ -22,7 +22,7 @@ export interface SessionUser {
   username: string;
   /** False until the user confirms or changes the auto-assigned username. */
   usernameChosen: boolean;
-  role: "investor" | "admin";
+  role: "investor" | "staff" | "admin";
   status: "active" | "suspended";
   emailVerified: boolean;
   mfaEnabled: boolean;

@@ -1,8 +1,11 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 
 import { connectDb } from "@/lib/db";
-import { Deposit, Withdrawal } from "@/lib/models";
+import { Deposit, Order, Withdrawal } from "@/lib/models";
 import { verifyIpn } from "@/lib/payments/nowpayments";
+import { reportError } from "@/lib/services/errors";
+import { fulfilOrder } from "@/lib/services/fulfilment";
+import { applyOrderPaymentStatus } from "@/lib/services/order-payments";
 import {
   applyPaymentStatus,
   applyPayoutStatus,
@@ -25,7 +28,36 @@ export async function POST(req: Request) {
   }
   try {
     await connectDb();
-    if (body.payment_id !== undefined) {
+    const orderRef = String(body.order_id ?? "");
+    if (body.payment_id !== undefined && orderRef.startsWith("ORD-")) {
+      // A payment for an order. Matched by the provider's payment id, then by our order number.
+      const o = await Order.findOne({
+        $or: [
+          { "payment.paymentId": String(body.payment_id) },
+          { number: orderRef },
+        ],
+      })
+        .select("_id")
+        .lean();
+      if (o) {
+        const r = await applyOrderPaymentStatus(
+          String(o._id),
+          String(body.payment_status ?? ""),
+          {
+            actually_paid: Number(body.actually_paid) || undefined,
+            pay_amount: Number(body.pay_amount) || undefined,
+            price_amount: Number(body.price_amount) || undefined,
+          },
+        );
+        // Newly paid: place the order after we have answered the provider. The cron job is the safety net.
+        if (r === "paid")
+          after(() =>
+            fulfilOrder(String(o._id)).catch((e) =>
+              reportError("fulfil.after_payment", e),
+            ),
+          );
+      }
+    } else if (body.payment_id !== undefined) {
       const d = await Deposit.findOne({
         $or: [
           { providerPaymentId: String(body.payment_id) },
@@ -59,7 +91,7 @@ export async function POST(req: Request) {
     }
     return NextResponse.json({ ok: true });
   } catch (e) {
-    console.error("[webhook] payments failed", e);
+    await reportError("webhook.payments", e);
     // A 500 makes the provider retry later.
     return NextResponse.json({ ok: false }, { status: 500 });
   }

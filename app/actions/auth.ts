@@ -4,14 +4,16 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+import { allowIp } from "@/lib/auth/client-ip";
+import { rateLimit } from "@/lib/auth/rate-limit";
 import {
   createSession,
   destroyCurrentSession,
   getPendingUser,
   markMfaVerified,
 } from "@/lib/auth/session";
-import { connectDb, DbNotConfiguredError } from "@/lib/db";
-import { User } from "@/lib/models";
+import { DbNotConfiguredError } from "@/lib/db";
+import { log } from "@/lib/log";
 import {
   checkCredentials,
   checkMfaCode,
@@ -36,7 +38,7 @@ function fail(e: unknown): ActionState {
       error: "The service is not available yet. Please try again later.",
     };
   }
-  console.error(e);
+  log.error("[auth] action failed", e);
   return { ok: false, error: "Something went wrong. Please try again." };
 }
 
@@ -49,23 +51,24 @@ export async function registerAction(
       name: z.string().trim().max(80),
       email: emailSchema,
       password: passwordSchema,
-      plan: z.string().max(40).optional(),
-      ref: z.string().max(20).optional(),
     })
     .safeParse({
       name: str(f, "name"),
       email: str(f, "email"),
       password: str(f, "password"),
-      plan: str(f, "plan") || undefined,
-      ref: str(f, "ref") || undefined,
     });
   if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
+  // Sign-up is open to anyone, so it is limited by address and by email.
+  if (
+    !(await allowIp("register", 8, 3600)) ||
+    !(await rateLimit(`register:${parsed.data.email}`, 3, 3600))
+  )
+    return {
+      ok: false,
+      error: "Too many sign-up attempts. Please wait a little and try again.",
+    };
   try {
-    await registerUser({
-      ...parsed.data,
-      planSlug: parsed.data.plan,
-      referralCode: parsed.data.ref,
-    });
+    await registerUser(parsed.data);
   } catch (e) {
     return fail(e);
   }
@@ -74,18 +77,9 @@ export async function registerAction(
   );
 }
 
-/**
- * Where to land after signing in. Admins go to /admin. An investor who chose a plan before signing in
- * continues straight to the invest form for that plan; everyone else goes to the dashboard.
- */
-async function homeFor(userId: string, role: "investor" | "admin") {
-  if (role === "admin") return "/admin";
-  await connectDb();
-  const u = await User.findById(userId).select("pendingPlanSlug").lean();
-  const slug = u?.pendingPlanSlug as string | undefined;
-  return slug
-    ? `/dashboard/investments?plan=${encodeURIComponent(slug)}#invest`
-    : "/dashboard";
+/** Where to land after signing in: admins go to /admin, everyone else to the dashboard. */
+function homeFor(role: "investor" | "staff" | "admin") {
+  return role === "admin" || role === "staff" ? "/admin" : "/dashboard";
 }
 
 export async function loginAction(
@@ -131,14 +125,7 @@ export async function loginAction(
         : "/verify-email?sent=1";
     } else if (r.status === "ok" || r.status === "mfa") {
       await createSession(r.userId, { mfaVerified: r.status === "ok" });
-      // A plan picked on the landing page (?plan=) is remembered, so we can continue to it after login.
-      const plan = str(f, "plan");
-      if (r.role === "investor" && /^[a-z0-9-]{2,30}$/.test(plan)) {
-        await connectDb();
-        await User.updateOne({ _id: r.userId }, { pendingPlanSlug: plan });
-      }
-      dest =
-        r.status === "mfa" ? "/login/mfa" : await homeFor(r.userId, r.role);
+      dest = r.status === "mfa" ? "/login/mfa" : homeFor(r.role);
     }
   } catch (e) {
     return fail(e);
@@ -159,7 +146,7 @@ export async function mfaAction(
     if (!(await checkMfaCode(u.id, code)))
       return { ok: false, error: "That code is not valid." };
     await markMfaVerified(u.sessionId);
-    dest = await homeFor(u.id, u.role);
+    dest = homeFor(u.role);
   } catch (e) {
     if (e instanceof Error && e.message === "NEXT_REDIRECT") throw e;
     return fail(e);
@@ -197,6 +184,12 @@ export async function resetAction(
   if (!pw.success) return { ok: false, error: firstError(pw.error) };
   if (pw.data !== str(f, "confirm"))
     return { ok: false, error: "Passwords do not match." };
+  // Token guessing is hopeless, but the endpoint is public, so it is limited by address anyway.
+  if (!(await allowIp("reset", 20, 900)))
+    return {
+      ok: false,
+      error: "Too many attempts. Please wait a little and try again.",
+    };
   try {
     if (!(await resetPassword(str(f, "token"), pw.data))) {
       return { ok: false, error: "This reset link is invalid or has expired." };
@@ -228,6 +221,11 @@ export async function confirmEmailAction(
   _: ActionState,
   f: FormData,
 ): Promise<ActionState> {
+  if (!(await allowIp("confirm", 30, 900)))
+    return {
+      ok: false,
+      error: "Too many attempts. Please wait a little and try again.",
+    };
   try {
     const { confirmEmail } = await import("@/lib/services/auth");
     if (!(await confirmEmail(str(f, "token")))) {

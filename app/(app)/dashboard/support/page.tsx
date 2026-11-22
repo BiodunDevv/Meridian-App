@@ -13,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth/guards";
 import { connectDb } from "@/lib/db";
-import { Ticket } from "@/lib/models";
+import { Order, Ticket } from "@/lib/models";
 import { formatDateTime } from "@/lib/money";
 import { plain } from "@/lib/services/queries";
 import { ticketRef } from "@/lib/services/support";
@@ -35,9 +35,24 @@ const STATUS_LABEL: Record<string, string> = {
   closed: "Closed",
 };
 
-export default async function SupportPage() {
+export default async function SupportPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ order?: string }>;
+}) {
   const user = await requireUser();
   await connectDb();
+  // Opened from an order page: the order must belong to this customer.
+  const orderId = (await searchParams).order;
+  const linked = orderId
+    ? await Order.findOne({ _id: orderId, userId: user.id })
+        .select("number")
+        .lean()
+        .catch(() => null)
+    : null;
+  const order = linked
+    ? { id: String(linked._id), number: linked.number as string }
+    : undefined;
   const tickets = plain(
     await Ticket.find({ userId: user.id })
       .sort({ lastMessageAt: -1 })
@@ -51,6 +66,7 @@ export default async function SupportPage() {
         description="Ask a question and we reply here and by email. Your whole conversation stays in one place."
         action={
           <NewTicketDialog
+            order={order}
             trigger={
               <Button>
                 <Plus /> New request

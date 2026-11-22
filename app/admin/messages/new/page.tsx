@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { MessageComposer } from "@/components/app/message-composer";
 import { PageHeader } from "@/components/app/ui";
+import { requireAdmin } from "@/lib/auth/guards";
 import { connectDb } from "@/lib/db";
 import { MessageTemplate } from "@/lib/models";
 import { plain } from "@/lib/services/queries";
@@ -9,6 +10,7 @@ import { plain } from "@/lib/services/queries";
 export const metadata: Metadata = { title: "New message" };
 
 export default async function NewMessagePage() {
+  await requireAdmin();
   await connectDb();
   const rows = plain(
     await MessageTemplate.find().sort({ createdAt: -1 }).limit(50).lean(),

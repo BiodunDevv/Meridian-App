@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import { EmptyState, PageHeader, Panel } from "@/components/app/ui";
 import { Button } from "@/components/ui/button";
+import { requireAdmin } from "@/lib/auth/guards";
 import { connectDb } from "@/lib/db";
 import { Message } from "@/lib/models";
 import { formatDateTime } from "@/lib/money";
@@ -26,6 +27,7 @@ type Row = {
 };
 
 export default async function MessagesPage() {
+  await requireAdmin();
   await connectDb();
   const rows = plain(
     await Message.find().sort({ createdAt: -1 }).limit(100).lean(),

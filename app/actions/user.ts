@@ -5,14 +5,12 @@ import { headers } from "next/headers";
 import { z } from "zod";
 
 import { requireUser } from "@/lib/auth/guards";
-import { withIdempotency } from "@/lib/auth/idempotency";
 import { rateLimit } from "@/lib/auth/rate-limit";
 import { currentTokenHash } from "@/lib/auth/session";
-import { checkAddress } from "@/lib/coins";
 import { COUNTRY_NAMES } from "@/lib/countries";
 import { connectDb } from "@/lib/db";
+import { log } from "@/lib/log";
 import { Notification, PushSubscription, User } from "@/lib/models";
-import { formatUsd } from "@/lib/money";
 import {
   changePassword,
   confirmMfaSetup,
@@ -21,13 +19,6 @@ import {
   revokeSession,
   startMfaSetup,
 } from "@/lib/services/auth";
-import {
-  cancelDeposit,
-  createDeposit,
-  quoteDeposit,
-  submitDeposit,
-} from "@/lib/services/deposits";
-import { invest, setAutoCompound, topUp } from "@/lib/services/investments";
 import { submitKyc } from "@/lib/services/kyc";
 import { InsufficientFundsError } from "@/lib/services/ledger";
 import {
@@ -35,7 +26,6 @@ import {
   isUsernameTaken,
   validateUsernameFormat,
 } from "@/lib/services/username";
-import { requestWithdrawal } from "@/lib/services/withdrawals";
 import {
   cloudinaryConfigured,
   createUploadTicket,
@@ -43,12 +33,7 @@ import {
   type StoredDoc,
   verifyDocument,
 } from "@/lib/storage/cloudinary";
-import {
-  type ActionState,
-  firstError,
-  passwordSchema,
-  usd,
-} from "@/lib/validation";
+import { type ActionState, firstError, passwordSchema } from "@/lib/validation";
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? "");
 
@@ -58,168 +43,8 @@ function fail(e: unknown): ActionState {
   if (e instanceof Error && !/Mongo|mongoose|ECONN/i.test(e.name + e.message)) {
     return { ok: false, error: e.message };
   }
-  console.error(e);
+  log.error("[user] action failed", e);
   return { ok: false, error: "Something went wrong. Please try again." };
-}
-
-/* ---------- Deposits (checkout, like a payment platform) ---------- */
-export async function quoteAction(
-  symbol: string,
-  amountUsd: number,
-): Promise<{
-  ok: boolean;
-  rate?: number;
-  cryptoAmount?: number;
-  error?: string;
-}> {
-  const user = await requireUser();
-  if (!(await rateLimit(`quote:${user.id}`, 60, 60)))
-    return { ok: false, error: "Slow down for a moment." };
-  if (!(amountUsd > 0)) return { ok: false, error: "Enter an amount." };
-  const q = await quoteDeposit(symbol, Math.round(amountUsd * 100));
-  return q
-    ? { ok: true, rate: q.rate, cryptoAmount: q.cryptoAmount }
-    : { ok: false, error: "No live rate for this asset right now." };
-}
-
-export async function createDepositAction(
-  _: ActionState,
-  f: FormData,
-): Promise<ActionState> {
-  const user = await requireUser();
-  const parsed = z
-    .object({
-      asset: z.string().min(1, "Choose an asset."),
-      network: z.string().min(1, "Choose a network."),
-      amountCents: usd(),
-    })
-    .safeParse({
-      asset: str(f, "asset"),
-      network: str(f, "network"),
-      amountCents: str(f, "amount"),
-    });
-  if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
-  if (!(await rateLimit(`deposit-create:${user.id}`, 10, 3600)))
-    return {
-      ok: false,
-      error:
-        "You have created several payments recently. Please wait a little.",
-    };
-  const r = await withIdempotency(user.id, str(f, "idemKey"), async () => {
-    try {
-      const d = await createDeposit(user.id, parsed.data);
-      return { ok: true, message: "Payment created.", id: String(d._id) };
-    } catch (e) {
-      return fail(e);
-    }
-  });
-  revalidatePath("/dashboard/deposit");
-  return r as ActionState;
-}
-
-export async function submitDepositAction(
-  _: ActionState,
-  f: FormData,
-): Promise<ActionState> {
-  const user = await requireUser();
-  const id = str(f, "id");
-  const txRef = z.string().trim().max(200).safeParse(str(f, "txRef"));
-  if (!txRef.success)
-    return { ok: false, error: "That transaction ID is too long." };
-  const r = await withIdempotency(user.id, str(f, "idemKey"), async () => {
-    try {
-      await submitDeposit(user.id, id, txRef.data);
-      return {
-        ok: true,
-        message:
-          "Thanks. Your payment was submitted and our team is verifying it.",
-      };
-    } catch (e) {
-      return fail(e);
-    }
-  });
-  revalidatePath(`/dashboard/deposit/${id}`);
-  revalidatePath("/dashboard", "layout");
-  return r;
-}
-
-export async function cancelDepositAction(f: FormData): Promise<ActionState> {
-  const user = await requireUser();
-  try {
-    await cancelDeposit(user.id, str(f, "id"));
-  } catch (e) {
-    return fail(e);
-  }
-  revalidatePath("/dashboard/deposit");
-  return { ok: true, message: "Payment cancelled." };
-}
-
-export async function investAction(
-  _: ActionState,
-  f: FormData,
-): Promise<ActionState> {
-  const user = await requireUser();
-  const parsed = z
-    .object({ plan: z.string().min(1, "Choose a plan."), amountCents: usd() })
-    .safeParse({ plan: str(f, "plan"), amountCents: str(f, "amount") });
-  if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
-  const r = await withIdempotency(user.id, str(f, "idemKey"), async () => {
-    try {
-      const inv = await invest(
-        user.id,
-        parsed.data.plan,
-        parsed.data.amountCents,
-        { autoCompound: f.get("autoCompound") === "on" },
-      );
-      return {
-        ok: true,
-        id: String(inv._id),
-        message: "Investment started. You can follow it under Investments.",
-      };
-    } catch (e) {
-      return fail(e);
-    }
-  });
-  revalidatePath("/dashboard", "layout");
-  return r;
-}
-
-export async function withdrawAction(
-  _: ActionState,
-  f: FormData,
-): Promise<ActionState> {
-  const user = await requireUser();
-  const parsed = z
-    .object({
-      asset: z.string().min(1, "Choose an asset."),
-      network: z.string().min(1, "Choose a network."),
-      address: z.string().trim().min(10, "Enter your wallet address.").max(200),
-      amountCents: usd(),
-    })
-    .safeParse({
-      asset: str(f, "asset"),
-      network: str(f, "network"),
-      address: str(f, "address"),
-      amountCents: str(f, "amount"),
-    });
-  if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
-  const badAddress = checkAddress(parsed.data.network, parsed.data.address);
-  if (badAddress) return { ok: false, error: badAddress };
-  const r = await withIdempotency(user.id, str(f, "idemKey"), async () => {
-    try {
-      const w = await requestWithdrawal(user.id, parsed.data);
-      return {
-        ok: true,
-        id: String(w._id),
-        message:
-          "Withdrawal requested. The amount is on hold until it is reviewed and paid.",
-      };
-    } catch (e) {
-      return fail(e);
-    }
-  });
-  revalidatePath("/dashboard", "layout");
-  return r;
 }
 
 export async function kycAction(
@@ -227,6 +52,11 @@ export async function kycAction(
   f: FormData,
 ): Promise<ActionState> {
   const user = await requireUser();
+  if (!(await rateLimit(`kyc:${user.id}`, 10, 3600)))
+    return {
+      ok: false,
+      error: "Too many attempts. Please wait a little and try again.",
+    } as ActionState;
   const parsed = z
     .object({
       fullName: z
@@ -303,6 +133,11 @@ export async function changePasswordAction(
   f: FormData,
 ): Promise<ActionState> {
   const user = await requireUser();
+  if (!(await rateLimit(`chgpw:${user.id}`, 10, 900)))
+    return {
+      ok: false,
+      error: "Too many attempts. Please wait a little and try again.",
+    } as ActionState;
   const next = passwordSchema.safeParse(str(f, "next"));
   if (!next.success) return { ok: false, error: firstError(next.error) };
   if (next.data !== str(f, "confirm"))
@@ -333,6 +168,11 @@ export async function confirmMfaAction(
   f: FormData,
 ) {
   const user = await requireUser();
+  if (!(await rateLimit(`mfaconf:${user.id}`, 10, 900)))
+    return {
+      ok: false,
+      error: "Too many attempts. Please wait a little and try again.",
+    } as ActionState;
   try {
     const codes = await confirmMfaSetup(user.id, str(f, "code"));
     revalidatePath("/dashboard/settings");
@@ -351,6 +191,11 @@ export async function disableMfaAction(
   f: FormData,
 ): Promise<ActionState> {
   const user = await requireUser();
+  if (!(await rateLimit(`mfaoff:${user.id}`, 10, 900)))
+    return {
+      ok: false,
+      error: "Too many attempts. Please wait a little and try again.",
+    } as ActionState;
   try {
     await disableMfa(user.id, str(f, "password"));
   } catch (e) {
@@ -459,50 +304,6 @@ export async function keepUsernameAction() {
   await connectDb();
   await User.updateOne({ _id: user.id }, { usernameChosen: true });
   revalidatePath("/dashboard", "layout");
-}
-
-/* ---------- Top-up and automatic reinvestment ---------- */
-export async function topUpAction(
-  _: ActionState,
-  f: FormData,
-): Promise<ActionState> {
-  const user = await requireUser();
-  const parsed = z
-    .object({ id: z.string().min(1), amountCents: usd() })
-    .safeParse({ id: str(f, "id"), amountCents: str(f, "amount") });
-  if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
-  const r = await withIdempotency(user.id, str(f, "idemKey"), async () => {
-    try {
-      const res = await topUp(user.id, parsed.data.id, parsed.data.amountCents);
-      return {
-        ok: true,
-        message: `Added to your plan. ${res.remaining} days left, projected profit on this amount ${formatUsd(res.totalProfitCents)}.`,
-      };
-    } catch (e) {
-      return fail(e);
-    }
-  });
-  revalidatePath("/dashboard", "layout");
-  return r;
-}
-
-export async function toggleAutoCompoundAction(
-  f: FormData,
-): Promise<ActionState> {
-  const user = await requireUser();
-  const on = str(f, "on") === "true";
-  try {
-    await setAutoCompound(user.id, str(f, "id"), on);
-  } catch (e) {
-    return fail(e);
-  }
-  revalidatePath("/dashboard", "layout");
-  return {
-    ok: true,
-    message: on
-      ? "This investment will reinvest automatically when it matures."
-      : "Automatic reinvestment is off. The payout will go to your balance.",
-  };
 }
 
 /* ---------- Web push ---------- */

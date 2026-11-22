@@ -27,6 +27,7 @@ import {
   parseParams,
   queryResource,
 } from "@/lib/admin/resources";
+import { requireStaff } from "@/lib/auth/guards";
 import { connectDb } from "@/lib/db";
 import { Ticket } from "@/lib/models";
 import { formatDateTime } from "@/lib/money";
@@ -52,6 +53,7 @@ export default async function AdminSupport({
 }: {
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
+  await requireStaff("support.reply");
   const params = parseParams(await searchParams);
   await connectDb();
   const [{ rows, total, page, pages, pageSize }, open, pending, unread] =

@@ -10,9 +10,9 @@ import { LiveRefresh } from "@/components/app/live-refresh";
 import { TicketThread } from "@/components/app/ticket-thread";
 import { ToastForm } from "@/components/app/toast-form";
 import { Panel, StatusBadge } from "@/components/app/ui";
-import { requireAdmin } from "@/lib/auth/guards";
+import { requireStaff } from "@/lib/auth/guards";
 import { connectDb } from "@/lib/db";
-import { Kyc } from "@/lib/models";
+import { Kyc, Order } from "@/lib/models";
 import { User } from "@/lib/models";
 import { formatDateTime, formatUsd } from "@/lib/money";
 import {
@@ -29,13 +29,18 @@ export default async function AdminTicket({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requireAdmin();
+  await requireStaff("support.reply");
   const { id } = await params;
   const data = await getThread(id, { includeInternal: true });
   if (!data) notFound();
   if (data.ticket.unreadByAdmin) await markRead(id, "admin");
   await connectDb();
   const { ticket, messages, owner } = data;
+  const linkedOrder = (ticket as { orderId?: unknown }).orderId
+    ? await Order.findById((ticket as { orderId?: unknown }).orderId)
+        .select("number")
+        .lean()
+    : null;
   const [full, kyc] = await Promise.all([
     User.findById(ticket.userId).select("balanceCents status").lean(),
     Kyc.findOne({ userId: ticket.userId }).select("status").lean(),
@@ -58,6 +63,18 @@ export default async function AdminTicket({
             {ticketRef(ticket._id)} ·{" "}
             <span className="capitalize">{ticket.category}</span> · opened{" "}
             {formatDateTime(ticket.createdAt)}
+            {linkedOrder && (
+              <>
+                {" "}
+                ·{" "}
+                <Link
+                  href={`/admin/orders/${linkedOrder._id}`}
+                  className="text-brand underline-offset-4 hover:underline"
+                >
+                  Order {linkedOrder.number as string}
+                </Link>
+              </>
+            )}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">

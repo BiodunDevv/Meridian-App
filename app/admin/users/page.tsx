@@ -182,7 +182,7 @@ export default async function AdminUsers({
               key: "role",
               label: "Role",
               options: [
-                { value: "investor", label: "Investor" },
+                { value: "investor", label: "Customer" },
                 { value: "admin", label: "Admin" },
               ],
             },

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { exportCsv, isResource, parseParams } from "@/lib/admin/resources";
-import { requireAdmin } from "@/lib/auth/guards";
+import { requireAdmin, requireStaff } from "@/lib/auth/guards";
 import { audit } from "@/lib/services/notify";
 
 /** CSV export of any admin table, honouring the same search and filters as the page. */
@@ -9,8 +9,12 @@ export async function GET(
   req: Request,
   ctx: { params: Promise<{ resource: string }> },
 ) {
-  const admin = await requireAdmin();
   const { resource } = await ctx.params;
+  // Staff may export orders only. Every other table is admin only.
+  const admin =
+    resource === "orders"
+      ? await requireStaff("orders.view")
+      : await requireAdmin();
   if (!isResource(resource))
     return NextResponse.json({ error: "Unknown resource" }, { status: 404 });
   const params = parseParams(Object.fromEntries(new URL(req.url).searchParams));

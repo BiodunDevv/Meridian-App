@@ -3,22 +3,31 @@
 import {
   ArrowDownToLine,
   ArrowUpFromLine,
-  BadgePercent,
+  BarChart3,
   Bell,
-  Gift,
-  Layers,
   LayoutDashboard,
   LifeBuoy,
   LogOut,
   type LucideIcon,
   Mail,
   MessageSquare,
-  PieChart,
+  Package,
+  Plug,
   Receipt,
+  RotateCcw,
+  Scale,
   ScrollText,
   Settings,
+  ShieldAlert,
+  ShoppingBag,
+  Smartphone,
+  Store,
+  Tag,
+  Tv,
   Users,
   Wallet,
+  Wifi,
+  Zap,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -40,10 +49,17 @@ import {
 
 import Meridian, { MeridianMark } from "../logos/meridian";
 
-type Item = { title: string; href: string; icon: LucideIcon; exact?: boolean };
+type Item = {
+  title: string;
+  href: string;
+  icon: LucideIcon;
+  exact?: boolean;
+  /** Also shown to staff. Everything else in the admin is for admins only. */
+  staff?: boolean;
+};
 type Group = { label?: string; items: Item[] };
 
-const investor: Group[] = [
+const customer: Group[] = [
   {
     items: [
       {
@@ -52,16 +68,28 @@ const investor: Group[] = [
         icon: LayoutDashboard,
         exact: true,
       },
-      { title: "My Portfolio", href: "/dashboard/portfolio", icon: PieChart },
-      { title: "Investments", href: "/dashboard/investments", icon: Layers },
     ],
   },
   {
-    label: "Money",
+    label: "Shop",
     items: [
-      { title: "Deposit", href: "/dashboard/deposit", icon: ArrowDownToLine },
-      { title: "Withdraw", href: "/dashboard/withdraw", icon: ArrowUpFromLine },
-      { title: "Transactions", href: "/dashboard/transactions", icon: Receipt },
+      {
+        title: "Shop",
+        href: "/dashboard/shop",
+        icon: Store,
+        exact: true,
+      },
+      { title: "Airtime", href: "/dashboard/shop/airtime", icon: Smartphone },
+      { title: "Data", href: "/dashboard/shop/data", icon: Wifi },
+      { title: "Electricity", href: "/dashboard/shop/electricity", icon: Zap },
+      { title: "Cable TV", href: "/dashboard/shop/tv", icon: Tv },
+    ],
+  },
+  {
+    label: "My orders",
+    items: [
+      { title: "Orders", href: "/dashboard/orders", icon: ShoppingBag },
+      { title: "Store credit", href: "/dashboard/transactions", icon: Receipt },
     ],
   },
   {
@@ -69,8 +97,14 @@ const investor: Group[] = [
     items: [
       { title: "Notifications", href: "/dashboard/notifications", icon: Bell },
       { title: "Support", href: "/dashboard/support", icon: LifeBuoy },
-      { title: "Referrals", href: "/dashboard/referrals", icon: Gift },
       { title: "Settings", href: "/dashboard/settings", icon: Settings },
+    ],
+  },
+  {
+    label: "Help",
+    items: [
+      { title: "Refund policy", href: "/refunds", icon: RotateCcw },
+      { title: "Crypto payment risks", href: "/risk", icon: ShieldAlert },
     ],
   },
 ];
@@ -78,11 +112,32 @@ const investor: Group[] = [
 const admin: Group[] = [
   {
     items: [
-      { title: "Overview", href: "/admin", icon: LayoutDashboard, exact: true },
+      {
+        title: "Overview",
+        href: "/admin",
+        icon: LayoutDashboard,
+        exact: true,
+        staff: true,
+      },
       { title: "Users", href: "/admin/users", icon: Users },
       { title: "Messages", href: "/admin/messages", icon: MessageSquare },
-      { title: "Support", href: "/admin/support", icon: LifeBuoy },
-      { title: "Investments", href: "/admin/investments", icon: Layers },
+      { title: "Support", href: "/admin/support", icon: LifeBuoy, staff: true },
+    ],
+  },
+  {
+    label: "Shop",
+    items: [
+      {
+        title: "Orders",
+        href: "/admin/orders",
+        icon: ShoppingBag,
+        staff: true,
+      },
+      { title: "Catalogue", href: "/admin/catalogue", icon: Package },
+      { title: "Pricing", href: "/admin/pricing", icon: Tag },
+      { title: "Providers", href: "/admin/providers", icon: Plug },
+      { title: "Reconciliation", href: "/admin/reconciliation", icon: Scale },
+      { title: "Reports", href: "/admin/reports", icon: BarChart3 },
     ],
   },
   {
@@ -100,7 +155,6 @@ const admin: Group[] = [
         href: "/admin/payment-methods",
         icon: Wallet,
       },
-      { title: "Plans", href: "/admin/plans", icon: BadgePercent },
     ],
   },
   {
@@ -113,8 +167,8 @@ const admin: Group[] = [
   },
 ];
 
-export function pageTitle(variant: "investor" | "admin", pathname: string) {
-  const groups = variant === "admin" ? admin : investor;
+export function pageTitle(variant: "customer" | "admin", pathname: string) {
+  const groups = variant === "admin" ? admin : customer;
   const all = groups.flatMap((g) => g.items);
   const hit = [...all]
     .sort((a, b) => b.href.length - a.href.length)
@@ -125,13 +179,22 @@ export function pageTitle(variant: "investor" | "admin", pathname: string) {
 export function AppSidebar({
   variant,
   badges = {},
+  role,
 }: {
-  variant: "investor" | "admin";
+  variant: "customer" | "admin";
   badges?: Record<string, number>;
+  role?: string;
 }) {
   const pathname = usePathname();
   const { setOpenMobile } = useSidebar();
-  const groups = variant === "admin" ? admin : investor;
+  const all = variant === "admin" ? admin : customer;
+  // Staff see only the screens they may use. This hides links; the pages and actions enforce the rule.
+  const groups =
+    variant === "admin" && role === "staff"
+      ? all
+          .map((g) => ({ ...g, items: g.items.filter((i) => i.staff) }))
+          .filter((g) => g.items.length)
+      : all;
   const home = variant === "admin" ? "/admin" : "/dashboard";
 
   return (
@@ -203,11 +266,6 @@ export function AppSidebar({
             <span>Log out</span>
           </SidebarMenuButton>
         </form>
-        {variant === "investor" && (
-          <p className="text-muted-foreground px-2 text-[11px] leading-snug group-data-[collapsible=icon]:hidden">
-            Capital at risk. Projected returns are illustrative.
-          </p>
-        )}
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

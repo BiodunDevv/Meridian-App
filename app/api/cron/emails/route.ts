@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { safeEqual } from "@/lib/crypto";
 import { retryDueEmails } from "@/lib/email/brevo";
 import { getEnv } from "@/lib/env";
+import { reportError } from "@/lib/services/errors";
 
 /** Retries failed emails that are due. Send `Authorization: Bearer $CRON_SECRET`. */
 export async function GET(req: Request) {
@@ -13,7 +14,7 @@ export async function GET(req: Request) {
   try {
     return NextResponse.json({ ok: true, ...(await retryDueEmails()) });
   } catch (e) {
-    console.error(e);
+    await reportError("cron.emails", e);
     return NextResponse.json({ ok: false }, { status: 500 });
   }
 }

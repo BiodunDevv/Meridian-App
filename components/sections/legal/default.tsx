@@ -38,6 +38,12 @@ export default function LegalPage({
               <p className="text-muted-foreground text-sm">
                 {legal.updatedLabel}: {legal.updated}
               </p>
+              <p
+                role="note"
+                className="border-gold/50 bg-gold/10 rounded-lg border px-3 py-2 text-sm"
+              >
+                {legal.draftNotice}
+              </p>
               <p className="text-muted-foreground text-base text-pretty">
                 {content.intro}
               </p>

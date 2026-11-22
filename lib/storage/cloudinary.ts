@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 
 import { getEnv } from "../env";
+import { log } from "../log";
 
 /**
  * Cloudinary storage for identity documents. Files are stored as **authenticated** assets, so they have no
@@ -142,6 +143,6 @@ export async function deleteDocument(publicId: string) {
       { method: "POST", body, cache: "no-store" },
     );
   } catch (err) {
-    console.error("[cloudinary] delete failed", err);
+    log.error("[cloudinary] delete failed", err);
   }
 }

@@ -5,10 +5,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import {
+  addRiskFlagAction,
   addUserNoteAction,
   clearSuppressionAction,
   deleteUserNoteAction,
+  removeRiskFlagAction,
   reviewKycAction,
+  saveShopControlsAction,
+  setUserRoleAction,
   setUserStatusAction,
 } from "@/app/actions/admin";
 import { ActionForm, SubmitButton } from "@/components/app/form";
@@ -46,16 +50,13 @@ import { connectDb } from "@/lib/db";
 import {
   AuditLog,
   Deposit,
-  Investment,
   Kyc,
-  LedgerEntry,
-  Referral,
   Session,
   User,
   UserNote,
   Withdrawal,
 } from "@/lib/models";
-import { formatDate, formatDateTime, formatUsd } from "@/lib/money";
+import { formatDateTime, formatUsd } from "@/lib/money";
 import { fullIdNumber } from "@/lib/services/kyc";
 import { audit } from "@/lib/services/notify";
 import { plain } from "@/lib/services/queries";
@@ -67,7 +68,6 @@ const TABS = [
   ["ledger", "Ledger"],
   ["deposits", "Deposits"],
   ["withdrawals", "Withdrawals"],
-  ["investments", "Investments"],
   ["identity", "Identity"],
   ["support", "Support"],
 ] as const;
@@ -77,7 +77,6 @@ const RESOURCE: Partial<Record<Tab, ResourceKey>> = {
   ledger: "transactions",
   deposits: "deposits",
   withdrawals: "withdrawals",
-  investments: "investments",
   support: "tickets",
 };
 
@@ -101,7 +100,7 @@ export default async function UserDetail({
   if (!user) notFound();
   const u = plain(user) as Record<string, any>;
 
-  const [kyc, dep, wd, active, profit, refCount, sessions] = await Promise.all([
+  const [kyc, dep, wd, sessions] = await Promise.all([
     Kyc.findOne({ userId: id }).lean(),
     Deposit.aggregate([
       { $match: { userId: user._id, status: "approved" } },
@@ -111,15 +110,6 @@ export default async function UserDetail({
       { $match: { userId: user._id, status: "paid" } },
       { $group: { _id: null, t: { $sum: "$amountCents" } } },
     ]),
-    Investment.aggregate([
-      { $match: { userId: user._id, status: "active" } },
-      { $group: { _id: null, t: { $sum: "$principalCents" }, n: { $sum: 1 } } },
-    ]),
-    LedgerEntry.aggregate([
-      { $match: { userId: user._id, type: "profit" } },
-      { $group: { _id: null, t: { $sum: "$amountCents" } } },
-    ]),
-    Referral.countDocuments({ referrerId: id }),
     Session.countDocuments({ userId: id, expiresAt: { $gt: new Date() } }),
   ]);
   const k = plain(kyc) as Record<string, any> | null;
@@ -224,21 +214,10 @@ export default async function UserDetail({
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <StatCard label="Balance" value={formatUsd(u.balanceCents)} />
         <StatCard label="Deposited" value={formatUsd(dep[0]?.t ?? 0)} />
         <StatCard label="Withdrawn" value={formatUsd(wd[0]?.t ?? 0)} />
-        <StatCard
-          label="Invested now"
-          value={formatUsd(active[0]?.t ?? 0)}
-          hint={`${active[0]?.n ?? 0} active`}
-        />
-        <StatCard
-          label="Profit paid"
-          value={formatUsd(profit[0]?.t ?? 0)}
-          tone={profit[0]?.t > 0 ? "positive" : undefined}
-          className="col-span-2 lg:col-span-1"
-        />
       </div>
 
       <nav
@@ -257,9 +236,7 @@ export default async function UserDetail({
         ))}
       </nav>
 
-      {tab === "overview" && (
-        <Overview u={u} id={id} sessions={sessions} refCount={refCount} />
-      )}
+      {tab === "overview" && <Overview u={u} id={id} sessions={sessions} />}
 
       {tab === "identity" && (
         <Panel title="Identity (KYC)">
@@ -358,9 +335,7 @@ export default async function UserDetail({
                         label: "Status",
                         options: (tab === "withdrawals"
                           ? ["pending", "paid", "rejected"]
-                          : tab === "investments"
-                            ? ["active", "matured"]
-                            : ["pending", "approved", "rejected"]
+                          : ["pending", "approved", "rejected"]
                         ).map((v) => ({ value: v, label: v })),
                       },
                     ]
@@ -398,7 +373,6 @@ function header(tab: Tab) {
     ledger: ["Date", "Type", "Detail", "Amount", "Balance"],
     deposits: ["Date", "Asset", "Amount", "Status", "Tx ref"],
     withdrawals: ["Date", "Asset", "Amount", "Status", "Tx hash"],
-    investments: ["Started", "Plan", "Amount", "Profit", "Matures", "Status"],
     support: ["Opened", "Subject", "Category", "Status", "Messages"],
   };
   return (
@@ -407,9 +381,7 @@ function header(tab: Tab) {
         <TableHead
           key={h}
           className={
-            ["Amount", "Balance", "Profit"].includes(h)
-              ? "text-right"
-              : undefined
+            ["Amount", "Balance"].includes(h) ? "text-right" : undefined
           }
         >
           {h}
@@ -473,31 +445,6 @@ function body(tab: Tab, r: Row) {
           </TableCell>
         </TableRow>
       );
-    case "investments":
-      return (
-        <TableRow key={id}>
-          <TableCell data-label="Started">
-            {formatDate(String(r.startedAt))}
-          </TableCell>
-          <TableCell data-label="Plan">
-            {r.planName}
-            {r.kind && r.kind !== "new" ? ` · ${r.kind}` : ""}
-            {r.autoCompound ? " · auto" : ""}
-          </TableCell>
-          <TableCell data-label="Amount" className={right}>
-            {formatUsd(Number(r.principalCents))}
-          </TableCell>
-          <TableCell data-label="Profit" className={right}>
-            {formatUsd(Number(r.totalProfitCents))}
-          </TableCell>
-          <TableCell data-label="Matures">
-            {formatDate(String(r.maturesAt))}
-          </TableCell>
-          <TableCell data-label="Status">
-            <StatusBadge status={String(r.status)} />
-          </TableCell>
-        </TableRow>
-      );
     case "support":
       return (
         <TableRow key={id}>
@@ -530,39 +477,20 @@ async function Overview({
   u,
   id,
   sessions,
-  refCount,
 }: {
   u: Record<string, any>;
   id: string;
   sessions: number;
-  refCount: number;
 }) {
-  const [notes, activity, referrer] = await Promise.all([
+  const [notes, activity] = await Promise.all([
     UserNote.find({ userId: id }).sort({ createdAt: -1 }).limit(50).lean(),
     AuditLog.find({ target: id }).sort({ createdAt: -1 }).limit(10).lean(),
-    u.referredBy ? User.findById(u.referredBy).select("email").lean() : null,
   ]);
   const items: [string, React.ReactNode][] = [
     ["Joined", formatDateTime(u.createdAt)],
     ["Last login", u.lastLoginAt ? formatDateTime(u.lastLoginAt) : "Never"],
     ["Username", u.username ? `@${u.username}` : "None"],
     ["Active sessions", String(sessions)],
-    ["Referral code", u.referralCode ?? "None"],
-    [
-      "Referred by",
-      referrer ? (
-        <Link
-          key="r"
-          href={`/admin/users/${u.referredBy}`}
-          className="text-brand underline-offset-4 hover:underline"
-        >
-          {(referrer as { email: string }).email}
-        </Link>
-      ) : (
-        "Nobody"
-      ),
-    ],
-    ["People referred", String(refCount)],
   ];
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -575,6 +503,134 @@ async function Overview({
             </div>
           ))}
         </dl>
+      </Panel>
+      <Panel
+        title="Role and ordering"
+        description="Staff can handle orders and support only. A blocked customer cannot order. A limit replaces the daily tier limit for this customer."
+      >
+        <div className="space-y-5 text-sm">
+          {u.role === "admin" ? (
+            <p className="text-muted-foreground">This is an admin account.</p>
+          ) : (
+            <ToastForm
+              action={setUserRoleAction}
+              className="flex flex-wrap items-end gap-2"
+            >
+              <input type="hidden" name="id" value={id} />
+              <label className="space-y-1">
+                <span className="text-muted-foreground block text-xs">
+                  Role
+                </span>
+                <select
+                  name="role"
+                  defaultValue={u.role}
+                  className="border-input bg-background h-9 rounded-md border px-2 text-sm"
+                >
+                  <option value="investor">Customer</option>
+                  <option value="staff">Staff</option>
+                </select>
+              </label>
+              <SubmitButton size="sm" variant="outline" pending="Saving…">
+                Change role
+              </SubmitButton>
+            </ToastForm>
+          )}
+          <ActionForm
+            action={saveShopControlsAction}
+            resetOnSuccess={false}
+            className="grid grid-cols-1 gap-3 sm:grid-cols-3"
+          >
+            <input type="hidden" name="id" value={id} />
+            <label className="flex items-center gap-2 sm:col-span-3">
+              <input
+                type="checkbox"
+                name="blocked"
+                defaultChecked={Boolean(u.shopBlocked)}
+                className="size-4"
+              />
+              Block this customer from ordering
+            </label>
+            <label className="space-y-1 sm:col-span-2">
+              <span className="text-muted-foreground block text-xs">
+                Daily limit for this customer (USD, empty = use the tier limits)
+              </span>
+              <input
+                name="limit"
+                type="number"
+                min="0"
+                step="0.01"
+                defaultValue={
+                  typeof u.shopLimitUsdCents === "number"
+                    ? u.shopLimitUsdCents / 100
+                    : ""
+                }
+                className="border-input bg-background h-9 w-full rounded-md border px-2 text-sm"
+              />
+            </label>
+            <div className="self-end">
+              <SubmitButton size="sm" pending="Saving…">
+                Save
+              </SubmitButton>
+            </div>
+          </ActionForm>
+          <div className="space-y-2">
+            <p className="text-muted-foreground text-xs">Risk flags</p>
+            {(u.riskFlags ?? []).length === 0 ? (
+              <p className="text-muted-foreground">None.</p>
+            ) : (
+              <ul className="space-y-1">
+                {(
+                  u.riskFlags as { flag: string; note?: string; by?: string }[]
+                ).map((r) => (
+                  <li
+                    key={r.flag + (r.note ?? "")}
+                    className="flex items-center justify-between gap-2"
+                  >
+                    <span>
+                      <span className="font-medium">
+                        {r.flag.replace(/_/g, " ")}
+                      </span>
+                      {r.note ? ` · ${r.note}` : ""}
+                      <span className="text-muted-foreground"> · {r.by}</span>
+                    </span>
+                    <ToastForm action={removeRiskFlagAction}>
+                      <input type="hidden" name="id" value={id} />
+                      <input type="hidden" name="flag" value={r.flag} />
+                      <SubmitButton size="sm" variant="ghost" pending="…">
+                        Remove
+                      </SubmitButton>
+                    </ToastForm>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <ActionForm
+              action={addRiskFlagAction}
+              className="flex flex-wrap items-end gap-2"
+            >
+              <input type="hidden" name="id" value={id} />
+              <select
+                name="flag"
+                className="border-input bg-background h-9 rounded-md border px-2 text-sm"
+              >
+                <option value="watch">Watch</option>
+                <option value="wrong_details">Wrong details</option>
+                <option value="suspected_fraud">Suspected fraud</option>
+                <option value="chargeback_risk">Chargeback risk</option>
+                <option value="high_value">High value</option>
+              </select>
+              <input
+                name="note"
+                placeholder="Note (optional)"
+                maxLength={300}
+                className="border-input bg-background h-9 flex-1 rounded-md border px-2 text-sm"
+              />
+              <SubmitButton size="sm" variant="outline" pending="Adding…">
+                Add flag
+              </SubmitButton>
+            </ActionForm>
+          </div>
+        </div>
       </Panel>
       <Panel title="Admin notes" description="Only admins can see these.">
         <ActionForm action={addUserNoteAction}>

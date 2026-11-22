@@ -1,6 +1,4 @@
-import { ActivityTicker } from "@/components/app/activity-ticker";
 import { AppShell } from "@/components/app/app-shell";
-import { DailyEarningsTicker } from "@/components/app/daily-earnings-ticker";
 import { MfaPrompt } from "@/components/app/mfa-prompt";
 import { SetupNotice } from "@/components/app/setup-notice";
 import { UsernamePrompt } from "@/components/app/username-prompt";
@@ -8,8 +6,6 @@ import { requireUser } from "@/lib/auth/guards";
 import { connectDb } from "@/lib/db";
 import { isDbConfigured } from "@/lib/env";
 import { Notification, Ticket } from "@/lib/models";
-import { getRecentActivity } from "@/lib/services/activity";
-import { getDailyCredits } from "@/lib/services/daily-credit";
 
 export const dynamic = "force-dynamic";
 
@@ -21,10 +17,6 @@ export default async function DashboardLayout({
   if (!isDbConfigured()) return <SetupNotice />;
   const user = await requireUser();
   await connectDb();
-  const [activity, daily] = await Promise.all([
-    getRecentActivity(),
-    getDailyCredits(user.id),
-  ]);
   const supportUnread = await Ticket.countDocuments({
     userId: user.id,
     unreadByUser: true,
@@ -36,22 +28,12 @@ export default async function DashboardLayout({
   return (
     <AppShell
       user={user}
-      variant="investor"
+      variant="customer"
       unread={unread}
       badges={{
         "/dashboard/notifications": unread,
         "/dashboard/support": supportUnread,
       }}
-      ticker={
-        <>
-          <DailyEarningsTicker
-            items={daily.items}
-            total={daily.total}
-            dayKey={new Date().toISOString().slice(0, 10)}
-          />
-          <ActivityTicker items={activity} />
-        </>
-      }
       installAllowed={user.usernameChosen && !user.mfaPromptDue}
     >
       {user.emailBlocked && (

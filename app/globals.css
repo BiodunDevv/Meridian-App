@@ -218,6 +218,59 @@
     --shadow-strong: #00000099;
   }
 
+  /*
+   * Inverted surface. Anything inside `.invert-theme` is drawn with the OTHER theme's palette: the header is dark
+   * in light mode and light in dark mode. Because it swaps the same tokens every component already uses, buttons,
+   * the theme toggle and the account menu trigger inside it need no special styling.
+   */
+  :root:not(.dark) .invert-theme {
+    color-scheme: dark;
+    --brand: #6c97ff;
+    --brand-foreground: #2f66f5;
+    --gold: #e0b94a;
+    --gold-foreground: #e6c36a;
+    --background: #08090d;
+    --foreground: #f3f6ff;
+    --card: #0d0f16;
+    --card-foreground: #f3f6ff;
+    --popover: #0d0f16;
+    --popover-foreground: #f3f6ff;
+    --secondary: #141722;
+    --secondary-foreground: #f3f6ff;
+    --muted: #141722;
+    --muted-foreground: #a8aec2;
+    --accent: #1a1e2b;
+    --accent-foreground: #f3f6ff;
+    --destructive-foreground: #f87171;
+    --border: #f3f6ff26;
+    --input: #f3f6ff26;
+    --ring: #6c97ff;
+  }
+
+  .dark .invert-theme {
+    color-scheme: light;
+    --brand: #2459f2;
+    --brand-foreground: #5b8cff;
+    --gold: #d4af37;
+    --gold-foreground: #7a5a06;
+    --background: #f6f8fd;
+    --foreground: #0a1230;
+    --card: #ffffff;
+    --card-foreground: #0a1230;
+    --popover: #ffffff;
+    --popover-foreground: #0a1230;
+    --secondary: #eaeffa;
+    --secondary-foreground: #0a1230;
+    --muted: #eaeffa;
+    --muted-foreground: #55607a;
+    --accent: #e1e9fc;
+    --accent-foreground: #0a1230;
+    --destructive-foreground: #dc2626;
+    --border: #0a1230;
+    --input: #dde3f0;
+    --ring: #2459f2;
+  }
+
   * {
     @apply border-border dark:border-border/10;
   }

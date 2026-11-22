@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 import { explorerTxUrl } from "../coins";
 import { connectDb, withTx } from "../db";
 import { emails } from "../email/templates";
+import { log } from "../log";
 import { Asset, Deposit, User } from "../models";
 import { formatDateTime, formatUsd } from "../money";
 import {
@@ -14,7 +15,6 @@ import {
 import { credit } from "./ledger";
 import { audit, mailAdmins, notify } from "./notify";
 import { formatCrypto, quote } from "./prices";
-import { maybeRewardReferrer } from "./referrals";
 
 type Actor = { id: string; email: string };
 
@@ -122,7 +122,7 @@ export async function createDeposit(
             callbackUrl: callbackUrl(),
           });
         } catch (e) {
-          console.error("[payments] create failed", e);
+          log.error("[payments] create failed", e);
           throw new Error(
             e instanceof Error && /amount|minimal|min/i.test(e.message)
               ? "That amount is too small for this coin. Try a larger amount or another coin."
@@ -201,7 +201,7 @@ export async function submitDeposit(userId: string, id: string, txRef: string) {
     {
       title: "Payment submitted",
       body: `${d.reference} · ${amount} in ${d.asset} is being verified.`,
-      href: `/dashboard/deposit/${d._id}`,
+      href: `/dashboard/transactions`,
     },
     emails.depositReceived(amount, d.asset, d.network),
   );
@@ -273,7 +273,7 @@ export async function approveDeposit(
   await announceApproved(dep, admin);
 }
 
-/** Everything that follows a credit: notice, email, referral reward and the audit entry. */
+/** Everything that follows a credit: notice, email and the audit entry. */
 async function announceApproved(
   dep: {
     _id: unknown;
@@ -308,11 +308,6 @@ async function announceApproved(
       date: formatDateTime(dep.reviewedAt ?? new Date()),
     }),
   );
-  await maybeRewardReferrer({
-    _id: dep._id as never,
-    userId: dep.userId as never,
-    amountCents: credited,
-  });
   await audit(admin, "deposit.approve", String(dep._id), {
     requestedCents: dep.amountCents,
     creditedCents: credited,
@@ -367,7 +362,7 @@ export async function failDeposit(id: string, reason: string) {
     {
       title: "Deposit not completed",
       body: reason,
-      href: `/dashboard/deposit/${d._id}`,
+      href: `/dashboard/transactions`,
     },
     emails.depositRejected(formatUsd(d.amountCents), reason),
   );
@@ -394,7 +389,7 @@ export async function rejectDeposit(admin: Actor, id: string, reason: string) {
     {
       title: "Deposit not confirmed",
       body: reason || undefined,
-      href: "/dashboard/deposit",
+      href: "/dashboard/transactions",
     },
     emails.depositRejected(amount, reason),
   );

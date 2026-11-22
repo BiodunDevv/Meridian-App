@@ -18,6 +18,9 @@ export default function Items() {
           {features.title}
         </h2>
         <FeatureGrid items={features.items} />
+        <p className="text-muted-foreground max-w-[640px] text-center text-sm text-pretty">
+          {features.note}
+        </p>
       </div>
     </Section>
   );

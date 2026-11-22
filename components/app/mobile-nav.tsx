@@ -1,11 +1,11 @@
 "use client";
 
 import {
-  ArrowDownToLine,
   Home,
-  Layers,
+  LifeBuoy,
   type LucideIcon,
   Receipt,
+  ShoppingBag,
   UserRound,
 } from "lucide-react";
 import Link from "next/link";
@@ -21,18 +21,18 @@ const items: {
   primary?: boolean;
 }[] = [
   { title: "Home", href: "/dashboard", icon: Home, exact: true },
-  { title: "Invest", href: "/dashboard/investments", icon: Layers },
+  { title: "Support", href: "/dashboard/support", icon: LifeBuoy },
   {
-    title: "Deposit",
-    href: "/dashboard/deposit",
-    icon: ArrowDownToLine,
+    title: "Shop",
+    href: "/dashboard/shop",
+    icon: ShoppingBag,
     primary: true,
   },
-  { title: "Activity", href: "/dashboard/transactions", icon: Receipt },
+  { title: "Orders", href: "/dashboard/orders", icon: Receipt },
   { title: "Account", href: "/dashboard/settings", icon: UserRound },
 ];
 
-/** App-style bottom tab bar for phones: five equal tabs, raised Deposit action, safe-area aware. */
+/** App-style bottom tab bar for phones: five equal tabs, raised Shop action, safe-area aware. */
 export function MobileNav() {
   const pathname = usePathname();
   return (

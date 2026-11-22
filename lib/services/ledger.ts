@@ -10,13 +10,10 @@ export class InsufficientFundsError extends Error {
 
 type LedgerType =
   | "deposit"
-  | "investment"
-  | "profit"
-  | "principal_return"
   | "withdrawal_hold"
   | "withdrawal_refund"
   | "adjustment"
-  | "referral_bonus";
+  | "order_refund";
 
 interface Ref {
   refType?: string;

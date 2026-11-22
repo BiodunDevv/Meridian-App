@@ -1,5 +1,6 @@
 import { connectDb } from "../db";
 import { getEnv } from "../env";
+import { log } from "../log";
 import { Deposit, User, Withdrawal } from "../models";
 import { formatUsd } from "../money";
 import {
@@ -11,6 +12,7 @@ import {
 } from "../payments/nowpayments";
 import { failDeposit, settleDeposit } from "./deposits";
 import { alertAdmins } from "./notify";
+import { reconcileOrders } from "./order-payments";
 import { holdFailedPayout, settlePayout } from "./withdrawals";
 
 /** Applies a payment provider status to a deposit. Safe to run any number of times, in any order. */
@@ -146,7 +148,7 @@ export async function syncDeposit(id: string, force = false) {
     const p = await getPayment(d.providerPaymentId as string);
     await applyPaymentStatus(id, p.payment_status, p);
   } catch (e) {
-    console.error("[payments] sync failed", e instanceof Error ? e.message : e);
+    log.error("[payments] sync failed", e instanceof Error ? e.message : e);
   }
 }
 
@@ -166,7 +168,7 @@ export async function syncWithdrawal(id: string, force = false) {
     const p = await getPayout(w.providerPayoutId as string);
     await applyPayoutStatus(id, p.status, p.hash, p.error);
   } catch (e) {
-    console.error("[payouts] sync failed", e instanceof Error ? e.message : e);
+    log.error("[payouts] sync failed", e instanceof Error ? e.message : e);
   }
 }
 
@@ -188,5 +190,6 @@ export async function reconcilePayments() {
     .limit(100)
     .lean();
   for (const w of payouts) await syncWithdrawal(String(w._id), true);
-  return { deposits: deposits.length, payouts: payouts.length };
+  const orders = await reconcileOrders();
+  return { deposits: deposits.length, payouts: payouts.length, ...orders };
 }

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { requireAdmin, requireUser } from "@/lib/auth/guards";
+import { requireStaff, requireUser } from "@/lib/auth/guards";
 import { withIdempotency } from "@/lib/auth/idempotency";
 import { rateLimit } from "@/lib/auth/rate-limit";
 import { connectDb } from "@/lib/db";
@@ -40,11 +40,13 @@ export async function createTicketAction(
         TICKET_CATEGORIES.map((c) => c.value) as [string, ...string[]],
       ),
       body: body.min(10, "Tell us a little more (10+ characters)."),
+      orderId: z.string().max(40).optional(),
     })
     .safeParse({
       subject: str(f, "subject"),
       category: str(f, "category"),
       body: str(f, "body"),
+      orderId: str(f, "orderId") || undefined,
     });
   if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
   if (!(await rateLimit(`ticket:${user.id}`, 5, 3600)))
@@ -56,7 +58,12 @@ export async function createTicketAction(
   const r = await withIdempotency(user.id, str(f, "idemKey"), async () => {
     const t = await createTicket(
       user,
-      parsed.data as { subject: string; category: "other"; body: string },
+      parsed.data as {
+        subject: string;
+        category: "other";
+        body: string;
+        orderId?: string;
+      },
     );
     return {
       ok: true,
@@ -99,6 +106,11 @@ export async function replyTicketAction(
 
 export async function closeOwnTicketAction(f: FormData): Promise<ActionState> {
   const user = await requireUser();
+  if (!(await rateLimit(`tclose:${user.id}`, 30, 3600)))
+    return {
+      ok: false,
+      error: "Too many attempts. Please wait a little and try again.",
+    } as ActionState;
   const id = str(f, "ticketId");
   await connectDb();
   const t = await Ticket.findOne({ _id: id, userId: user.id })
@@ -115,7 +127,7 @@ export async function adminReplyAction(
   _: ActionState,
   f: FormData,
 ): Promise<ActionState> {
-  const admin = await requireAdmin();
+  const admin = await requireStaff("support.reply");
   const parsed = body.safeParse(str(f, "body"));
   if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
   const id = str(f, "ticketId");
@@ -143,7 +155,7 @@ export async function adminReplyAction(
 }
 
 export async function adminSetStatusAction(f: FormData): Promise<ActionState> {
-  const admin = await requireAdmin();
+  const admin = await requireStaff("support.reply");
   const id = str(f, "ticketId");
   const status = z
     .enum(["open", "pending", "closed"])

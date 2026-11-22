@@ -8,9 +8,12 @@
     "start": "next start",
     "lint": "eslint .",
     "seed": "tsx --env-file=.env.local scripts/seed.ts",
+    "seed:catalogue": "tsx --env-file=.env.local scripts/seed-catalogue.ts",
     "reset": "tsx --env-file=.env.local scripts/reset.ts",
     "test:email": "tsx --env-file=.env.local scripts/test-email.ts",
-    "seed:plans": "tsx --env-file=.env.local scripts/seed-plans.ts"
+    "test": "tsx tests/pricing.test.ts && tsx tests/providers.test.ts && tsx tests/security.test.ts && tsx tests/guards.test.ts",
+    "test:db": "tsx --env-file=.env.local tests/idempotency.sim.ts && tsx --env-file=.env.local tests/orders.sim.ts && tsx --env-file=.env.local tests/fulfilment.sim.ts && tsx --env-file=.env.local tests/admin.sim.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@number-flow/react": "^0.6.2",

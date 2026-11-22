@@ -1,17 +1,18 @@
 import {
   BadgeCheck,
   Bell,
-  Layers,
-  LayoutDashboard,
-  LineChart,
+  Gift,
   Lock,
   type LucideIcon,
   MonitorSmartphone,
   Receipt,
   ScrollText,
   ShieldCheck,
+  Smartphone,
+  Tv,
   Users,
-  Wallet,
+  Wifi,
+  Zap,
 } from "lucide-react";
 
 import { Item, ItemDescription, ItemIcon, ItemTitle } from "./item";
@@ -19,16 +20,17 @@ import { Item, ItemDescription, ItemIcon, ItemTitle } from "./item";
 const ICONS: Record<string, LucideIcon> = {
   BadgeCheck,
   Bell,
-  Layers,
-  LayoutDashboard,
-  LineChart,
+  Gift,
   Lock,
   MonitorSmartphone,
   Receipt,
   ScrollText,
   ShieldCheck,
+  Smartphone,
+  Tv,
   Users,
-  Wallet,
+  Wifi,
+  Zap,
 };
 
 interface FeatureGridProps {

@@ -1,11 +1,8 @@
 import {
   ArrowDownLeft,
   ArrowUpRight,
-  Gift,
   type LucideIcon,
   RefreshCcw,
-  Sprout,
-  TrendingUp,
   Undo2,
   Wallet,
 } from "lucide-react";
@@ -35,6 +32,7 @@ import {
   parseParams,
   queryResource,
 } from "@/lib/admin/resources";
+import { requireAdmin } from "@/lib/auth/guards";
 import { connectDb } from "@/lib/db";
 import { LedgerEntry } from "@/lib/models";
 import { formatDateTime, formatUsd } from "@/lib/money";
@@ -55,13 +53,10 @@ type Row = {
 
 const ICON: Record<string, LucideIcon> = {
   deposit: ArrowDownLeft,
-  investment: Sprout,
-  profit: TrendingUp,
-  principal_return: Undo2,
+  order_refund: Undo2,
   withdrawal_hold: ArrowUpRight,
   withdrawal_refund: RefreshCcw,
   adjustment: Wallet,
-  referral_bonus: Gift,
 };
 
 function related(r: Row) {
@@ -76,6 +71,7 @@ export default async function AdminTransactions({
 }: {
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
+  await requireAdmin();
   const params = parseParams(await searchParams);
   await connectDb();
   // eslint-disable-next-line react-hooks/purity -- server component, evaluated per request
@@ -99,7 +95,7 @@ export default async function AdminTransactions({
         description="The platform ledger. Every money movement is recorded here with the balance it left behind."
       />
 
-      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3">
         <StatCard
           label="Deposits, 30 days"
           value={formatUsd(sum("deposit"))}
@@ -111,17 +107,6 @@ export default async function AdminTransactions({
           value={formatUsd(out)}
           icon={ArrowUpRight}
           hint="Net of refunds"
-        />
-        <StatCard
-          label="Profit paid, 30 days"
-          value={formatUsd(sum("profit"))}
-          icon={TrendingUp}
-          tone="gold"
-        />
-        <StatCard
-          label="Referral rewards, 30 days"
-          value={formatUsd(sum("referral_bonus"))}
-          icon={Gift}
         />
       </div>
 

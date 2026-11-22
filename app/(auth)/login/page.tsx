@@ -30,10 +30,7 @@ export default async function LoginPage({
       footer={
         <>
           New to Meridian?{" "}
-          <Link
-            href={sp.plan ? `/register?plan=${sp.plan}` : "/register"}
-            className={authLink}
-          >
+          <Link href="/register" className={authLink}>
             Create account
           </Link>
         </>
@@ -48,7 +45,6 @@ export default async function LoginPage({
         </p>
       )}
       <ActionForm action={loginAction} resetOnSuccess={false}>
-        <input type="hidden" name="plan" value={sp.plan ?? ""} />
         <TextField
           name="identifier"
           label="Email or username"

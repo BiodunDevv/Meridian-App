@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 import { MEMO_HINTS } from "../coins";
 import { connectDb, withTx } from "../db";
 import { emails } from "../email/templates";
+import { log } from "../log";
 import { Asset, Kyc, User, Withdrawal } from "../models";
 import { formatUsd } from "../money";
 import {
@@ -69,7 +70,7 @@ export async function requestWithdrawal(
     {
       title: "Withdrawal requested",
       body: `${amount} is on hold while we review it.`,
-      href: `/dashboard/withdraw/${w._id}`,
+      href: `/dashboard/transactions`,
     },
     emails.withdrawalRequested(
       amount,
@@ -89,7 +90,7 @@ export async function requestWithdrawal(
   );
   // Pay it automatically when it passes the safety checks. Otherwise it waits for a person.
   await tryAutoPayout(String(w._id)).catch((e) =>
-    console.error("[payout] auto failed", e),
+    log.error("[payout] auto failed", e),
   );
   return w;
 }
@@ -224,7 +225,7 @@ export async function tryAutoPayout(id: string) {
     });
     return true;
   } catch (e) {
-    console.error("[payout] create failed", e);
+    log.error("[payout] create failed", e);
     return hold(
       e instanceof Error
         ? `Automatic payout failed: ${e.message}`
@@ -255,7 +256,7 @@ export async function settlePayout(id: string, txHash: string) {
     {
       title: "Withdrawal paid",
       body: amount,
-      href: `/dashboard/withdraw/${w._id}`,
+      href: `/dashboard/transactions`,
     },
     emails.withdrawalPaid(amount, w.txHash),
   );
@@ -311,7 +312,7 @@ export async function markWithdrawalPaid(
     {
       title: "Withdrawal paid",
       body: amount,
-      href: `/dashboard/withdraw/${w._id}`,
+      href: `/dashboard/transactions`,
     },
     emails.withdrawalPaid(amount, txHash),
   );
@@ -350,7 +351,7 @@ export async function rejectWithdrawal(
     {
       title: "Withdrawal rejected",
       body: "The amount returned to your balance.",
-      href: "/dashboard/withdraw",
+      href: "/dashboard/transactions",
     },
     emails.withdrawalRejected(amount, reason),
   );

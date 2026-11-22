@@ -2,6 +2,7 @@ import { connectDb } from "../db";
 import { sendEmail } from "../email/brevo";
 import { emails } from "../email/templates";
 import { getEnv } from "../env";
+import { log } from "../log";
 import { AuditLog, Notification, User } from "../models";
 import { sendPush } from "./push";
 
@@ -20,7 +21,7 @@ export async function notify(
       if (u) await sendEmail({ to: u.email, ...email });
     }
   } catch (e) {
-    console.error("[notify] failed", e);
+    log.error("[notify] failed", e);
   }
 }
 
@@ -41,7 +42,7 @@ export async function alertAdmins(
       admins.map((a) => sendEmail({ to: a.email as string, ...mail })),
     );
   } catch (e) {
-    console.error("[alertAdmins] failed", e);
+    log.error("[alertAdmins] failed", e);
   }
 }
 
@@ -64,7 +65,7 @@ export async function mailAdmins(mail: {
       [...to].map((email) => sendEmail({ to: email, ...mail })),
     );
   } catch (e) {
-    console.error("[mailAdmins] failed", e);
+    log.error("[mailAdmins] failed", e);
   }
 }
 
@@ -84,6 +85,6 @@ export async function audit(
       meta,
     });
   } catch (e) {
-    console.error("[audit] failed", e);
+    log.error("[audit] failed", e);
   }
 }

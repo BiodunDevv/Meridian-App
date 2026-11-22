@@ -423,7 +423,7 @@ export function MessageComposer({
                 icon={Link2}
                 value={ctaUrl}
                 onChange={(e) => setCtaUrl(e.target.value)}
-                placeholder="/dashboard/deposit"
+                placeholder="/dashboard/orders"
                 autoComplete="off"
               />
             </div>

@@ -1,8 +1,7 @@
 /**
  * Fresh start. `npm run reset` WIPES the whole database (users, deposits,
- * investments, ledger, messages, everything) and recreates:
+ * ledger, messages, everything) and recreates:
  *   - the admin account from ADMIN_EMAIL / ADMIN_PASSWORD
- *   - the three plans from content/site.ts
  *   - the popular asset catalogue (no wallet addresses)
  *
  * Because that is irreversible, it asks you to type the database name first.
@@ -12,11 +11,10 @@ import { createInterface } from "node:readline/promises";
 
 import mongoose from "mongoose";
 
-import { plans } from "@/content/site";
 import { POPULAR_ASSETS } from "@/lib/coins";
 import { connectDb } from "@/lib/db";
 import { getEnv } from "@/lib/env";
-import { Asset, Plan, User } from "@/lib/models";
+import { Asset, User } from "@/lib/models";
 import { hashPassword } from "@/lib/services/auth";
 
 async function confirmWipe(dbName: string, host: string) {
@@ -78,23 +76,7 @@ async function main() {
   });
   console.log(`\nAdmin created: ${email}`);
 
-  // 3. Plans (from content/site.ts, smallest to largest)
-  for (const [i, p] of plans.items.entries()) {
-    await Plan.create({
-      slug: p.slug,
-      name: p.name,
-      tagline: p.tagline,
-      minCents: p.minUsd * 100,
-      maxCents: p.maxUsd * 100,
-      durationDays: p.durationDays,
-      projectedPct: p.projectedPct,
-      sort: i,
-      active: true,
-    });
-  }
-  console.log(`Plans created: ${plans.items.length}`);
-
-  // 4. Assets (hidden from users until a wallet address is added)
+  // 3. Assets (hidden from users until a wallet address is added)
   await Asset.insertMany(
     POPULAR_ASSETS.map((a, i) => ({
       symbol: a.symbol,

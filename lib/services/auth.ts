@@ -10,7 +10,6 @@ import { connectDb } from "../db";
 import { sendEmail } from "../email/brevo";
 import { absUrl, emails } from "../email/templates";
 import { EmailToken, Session, User } from "../models";
-import { attachReferral } from "./referrals";
 import { generateUsername } from "./username";
 
 const HOUR = 3_600_000;
@@ -46,8 +45,6 @@ export async function registerUser(input: {
   email: string;
   password: string;
   name: string;
-  planSlug?: string;
-  referralCode?: string;
 }) {
   await connectDb();
   const exists = await User.findOne({ email: input.email });
@@ -62,11 +59,7 @@ export async function registerUser(input: {
     passwordHash: await hashPassword(input.password),
     username: await generateUsername(input.email),
     usernameChosen: false,
-    pendingPlanSlug: input.planSlug,
   });
-  await attachReferral(String(u._id), input.referralCode).catch((e) =>
-    console.error("[referral] attach failed", e),
-  );
   await sendVerification(String(u._id));
 }
 
@@ -96,7 +89,11 @@ export async function resendVerification(email: string) {
 }
 
 export type LoginResult =
-  | { status: "ok" | "mfa"; userId: string; role: "investor" | "admin" }
+  | {
+      status: "ok" | "mfa";
+      userId: string;
+      role: "investor" | "staff" | "admin";
+    }
   | { status: "invalid" | "unverified" | "suspended" | "rate" };
 
 export async function checkCredentials(

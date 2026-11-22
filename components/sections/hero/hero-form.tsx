@@ -10,7 +10,7 @@ import { Button } from "../../ui/button";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
-export default function HeroForm({ plan }: { plan?: string }) {
+export default function HeroForm() {
   const id = useId();
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
@@ -23,9 +23,7 @@ export default function HeroForm({ plan }: { plan?: string }) {
       return;
     }
     setError("");
-    window.location.assign(
-      appLinks.registerWith({ email: value, ...(plan ? { plan } : {}) }),
-    );
+    window.location.assign(appLinks.registerWith({ email: value }));
   }
 
   return (

@@ -5,17 +5,13 @@ import { z } from "zod";
 
 import { requireAdmin } from "@/lib/auth/guards";
 import { checkAddress, nativeNetwork, POPULAR_ASSETS } from "@/lib/coins";
-import { totalPctFromDaily } from "@/lib/compound";
 import { connectDb } from "@/lib/db";
 import { retryDueEmails, retryEmailNow, sendEmail } from "@/lib/email/brevo";
 import { emails } from "@/lib/email/templates";
 import {
   Asset,
   Deposit,
-  Investment,
-  Plan,
   Session,
-  Setting,
   User,
   UserNote,
   Withdrawal,
@@ -25,17 +21,15 @@ import {
   paymentsConfigured,
   providerCode,
 } from "@/lib/payments/nowpayments";
-import { clearActivityCache } from "@/lib/services/activity";
 import { approveDeposit, rejectDeposit } from "@/lib/services/deposits";
 import { reviewKyc } from "@/lib/services/kyc";
 import { audit } from "@/lib/services/notify";
 import { savePaymentSettings } from "@/lib/services/payments";
-import { syncDefaultPlans } from "@/lib/services/plans-seed";
 import {
   markWithdrawalPaid,
   rejectWithdrawal,
 } from "@/lib/services/withdrawals";
-import { type ActionState, firstError, usd } from "@/lib/validation";
+import { type ActionState, firstError } from "@/lib/validation";
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
 
@@ -157,183 +151,114 @@ export async function setUserStatusAction(f: FormData) {
   }, "/admin/users");
 }
 
-/* ---------- Plans ---------- */
-const PLANS_PATH = "/admin/plans";
-
-/** Plans feed the public landing page, so refresh it as soon as they change. */
-const afterPlans = (r: ActionState) => {
-  if (r.ok) revalidatePath("/");
-  return r;
-};
-
-const planSchema = z
-  .object({
-    name: z
-      .string()
-      .trim()
-      .min(2, "Give the plan a name.")
-      .max(40, "Keep the name under 40 characters."),
-    tagline: z
-      .string()
-      .trim()
-      .max(120, "Keep the tagline under 120 characters."),
-    minCents: usd("Minimum"),
-    maxCents: usd("Maximum"),
-    durationDays: z.coerce
-      .number({ error: "Duration must be a number." })
-      .int("Duration must be whole days.")
-      .min(1, "Duration must be at least 1 day.")
-      .max(3650, "Duration is too long."),
-    dailyPct: z.coerce
-      .number({ error: "Daily return must be a number." })
-      .min(0, "Daily return cannot be negative.")
-      .max(5, "Daily return is too high. Keep it at 5% or less."),
-  })
-  .refine((d) => d.maxCents >= d.minCents, {
-    message: "Maximum must be at least the minimum.",
-    path: ["maxCents"],
-  })
-  // The daily rate is the source of truth; the total over the term follows from compounding.
-  .transform((d) => ({
-    ...d,
-    projectedPct:
-      Math.round(totalPctFromDaily(d.dailyPct, d.durationDays) * 100) / 100,
-  }));
-
-function parsePlan(f: FormData) {
-  return planSchema.safeParse({
-    name: str(f, "name"),
-    tagline: str(f, "tagline"),
-    minCents: str(f, "min"),
-    maxCents: str(f, "max"),
-    durationDays: str(f, "durationDays"),
-    dailyPct: str(f, "dailyPct"),
-    badge: str(f, "badge"),
-  });
+/* ---------- Customer roles, ordering controls and risk flags (admin only) ---------- */
+export async function setUserRoleAction(f: FormData) {
+  const admin = await requireAdmin();
+  const id = str(f, "id");
+  const role = str(f, "role");
+  if (!["investor", "staff"].includes(role))
+    return { ok: false, error: "Choose customer or staff." } as ActionState;
+  if (id === admin.id)
+    return {
+      ok: false,
+      error: "You cannot change your own role.",
+    } as ActionState;
+  return run(async () => {
+    await connectDb();
+    const target = await User.findById(id).select("role email");
+    if (!target) throw new Error("User not found.");
+    // Admins are created on the server (npm run seed), never from this screen, and are never demoted from here.
+    if (target.role === "admin")
+      throw new Error("An admin's role cannot be changed here.");
+    const before = target.role;
+    target.role = role as "investor" | "staff";
+    await target.save();
+    // Role is read from the database on every request, so this takes effect at once. Sign them out to be tidy.
+    await Session.deleteMany({ userId: id });
+    await audit(admin, "user.role", id, { from: before, to: role });
+    return role === "staff"
+      ? "Now staff. They can handle orders and support only, and were signed out."
+      : "Now a customer. They were signed out.";
+  }, `/admin/users/${id}`);
 }
 
-const slugify = (v: string) =>
-  v
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 30) || "plan";
-
-async function uniqueSlug(name: string) {
-  const base = slugify(name);
-  for (let i = 0; i < 50; i++) {
-    const slug = i === 0 ? base : `${base}-${i + 1}`;
-    if (!(await Plan.exists({ slug }))) return slug;
-  }
-  return `${base}-${Date.now().toString(36)}`;
-}
-
-export async function createPlanAction(
+export async function saveShopControlsAction(
   _: ActionState,
   f: FormData,
 ): Promise<ActionState> {
   const admin = await requireAdmin();
-  const parsed = parsePlan(f);
-  if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
+  const id = str(f, "id");
+  const limitRaw = str(f, "limit");
+  const limit = limitRaw === "" ? null : Number(limitRaw);
+  if (
+    limit !== null &&
+    (!Number.isFinite(limit) || limit < 0 || limit > 1_000_000)
+  )
+    return {
+      ok: false,
+      error: "The limit must be a number of dollars, or empty.",
+    };
   return run(async () => {
     await connectDb();
-    const slug = await uniqueSlug(parsed.data.name);
-    const sort = await Plan.countDocuments();
-    await Plan.create({
-      ...parsed.data,
-      slug,
-      sort,
-      active: f.get("active") === "on",
-    });
-    await audit(admin, "plan.create", slug, parsed.data);
-    return `Plan “${parsed.data.name}” created.`;
-  }, PLANS_PATH).then(afterPlans);
+    const blocked = f.get("blocked") === "on";
+    const update =
+      limit === null
+        ? { $set: { shopBlocked: blocked }, $unset: { shopLimitUsdCents: 1 } }
+        : {
+            $set: {
+              shopBlocked: blocked,
+              shopLimitUsdCents: Math.round(limit * 100),
+            },
+          };
+    const u = await User.findByIdAndUpdate(id, update);
+    if (!u) throw new Error("User not found.");
+    await audit(admin, "user.shop_controls", id, { blocked, limitUsd: limit });
+    return "Ordering controls saved.";
+  }, `/admin/users/${id}`);
 }
 
-export async function updatePlanAction(
+export async function addRiskFlagAction(
   _: ActionState,
   f: FormData,
 ): Promise<ActionState> {
   const admin = await requireAdmin();
-  const parsed = parsePlan(f);
+  const id = str(f, "id");
+  const parsed = z
+    .object({
+      flag: z.enum([
+        "chargeback_risk",
+        "wrong_details",
+        "suspected_fraud",
+        "high_value",
+        "watch",
+      ]),
+      note: z.string().trim().max(300).default(""),
+    })
+    .safeParse({ flag: str(f, "flag"), note: str(f, "note") });
   if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
   return run(async () => {
     await connectDb();
-    const plan = await Plan.findByIdAndUpdate(str(f, "id"), {
-      ...parsed.data,
-      active: f.get("active") === "on",
+    const u = await User.findByIdAndUpdate(id, {
+      $push: { riskFlags: { ...parsed.data, by: admin.email, at: new Date() } },
     });
-    if (!plan) throw new Error("Plan not found.");
-    await audit(admin, "plan.update", plan.slug, parsed.data);
-    return `Plan “${parsed.data.name}” updated. Existing investments keep their original terms.`;
-  }, PLANS_PATH).then(afterPlans);
+    if (!u) throw new Error("User not found.");
+    await audit(admin, "user.risk_flag", id, parsed.data);
+    return "Risk flag added.";
+  }, `/admin/users/${id}`);
 }
 
-export async function togglePlanAction(f: FormData) {
+export async function removeRiskFlagAction(f: FormData) {
   const admin = await requireAdmin();
+  const id = str(f, "id");
   return run(async () => {
     await connectDb();
-    const plan = await Plan.findById(str(f, "id"));
-    if (!plan) throw new Error("Plan not found.");
-    plan.active = !plan.active;
-    await plan.save();
-    await audit(
-      admin,
-      plan.active ? "plan.activate" : "plan.deactivate",
-      plan.slug,
+    await User.updateOne(
+      { _id: id },
+      { $pull: { riskFlags: { flag: str(f, "flag") } } },
     );
-    return plan.active
-      ? `${plan.name} is open to new investments.`
-      : `${plan.name} is closed to new investments.`;
-  }, PLANS_PATH).then(afterPlans);
-}
-
-export async function movePlanAction(f: FormData) {
-  const admin = await requireAdmin();
-  const dir = str(f, "dir") === "up" ? -1 : 1;
-  return run(async () => {
-    await connectDb();
-    const plans = await Plan.find().sort({ sort: 1, createdAt: 1 });
-    const i = plans.findIndex(
-      (p: { _id: unknown }) => String(p._id) === str(f, "id"),
-    );
-    const j = i + dir;
-    if (i < 0 || j < 0 || j >= plans.length) return "Already at the edge.";
-    [plans[i], plans[j]] = [plans[j], plans[i]];
-    await Promise.all(
-      plans.map((p: { _id: unknown }, idx: number) =>
-        Plan.updateOne({ _id: p._id }, { sort: idx }),
-      ),
-    );
-    await audit(admin, "plan.reorder", plans[j].slug);
-    return "Order updated.";
-  }, PLANS_PATH).then(afterPlans);
-}
-
-export async function deletePlanAction(f: FormData) {
-  const admin = await requireAdmin();
-  return run(async () => {
-    await connectDb();
-    const plan = await Plan.findById(str(f, "id"));
-    if (!plan) throw new Error("Plan not found.");
-    const used = await Investment.countDocuments({ planId: plan._id });
-    if (used)
-      throw new Error(
-        `${used} investment${used > 1 ? "s use" : " uses"} this plan, so it cannot be deleted. Close it to new investments instead.`,
-      );
-    await Plan.deleteOne({ _id: plan._id });
-    await audit(admin, "plan.delete", plan.slug);
-    return `Plan “${plan.name}” deleted.`;
-  }, PLANS_PATH).then(afterPlans);
-}
-
-export async function syncDefaultPlansAction() {
-  const admin = await requireAdmin();
-  return run(async () => {
-    const r = await syncDefaultPlans();
-    await audit(admin, "plan.sync_defaults", String(r.created + r.updated), r);
-    return `Default plans loaded: ${r.created} created, ${r.updated} updated${r.removed + r.closed ? `, ${r.removed + r.closed} old plans retired` : ""}.`;
-  }, PLANS_PATH).then(afterPlans);
+    await audit(admin, "user.risk_flag_remove", id, { flag: str(f, "flag") });
+    return "Risk flag removed.";
+  }, `/admin/users/${id}`);
 }
 
 /* ---------- Payment methods (assets and networks) ---------- */
@@ -716,68 +641,6 @@ export async function deleteUserNoteAction(f: FormData) {
   if (note) await audit(admin, "user.note_delete", String(note.userId));
   revalidatePath(`/admin/users/${str(f, "userId")}`);
   return { ok: true, message: "Note deleted." } as ActionState;
-}
-
-/* ---------- Referral programme ---------- */
-export async function saveReferralSettingsAction(
-  _: ActionState,
-  f: FormData,
-): Promise<ActionState> {
-  const admin = await requireAdmin();
-  const parsed = z
-    .object({
-      pct: z.coerce
-        .number({ error: "Reward % must be a number." })
-        .min(0, "Reward cannot be negative.")
-        .max(25, "Keep the reward at 25% or less."),
-      capUsd: z.coerce
-        .number({ error: "Cap must be a number." })
-        .min(1, "Cap must be at least $1.")
-        .max(100000),
-      minDepositUsd: z.coerce
-        .number({ error: "Minimum deposit must be a number." })
-        .min(1, "Minimum must be at least $1.")
-        .max(1000000),
-    })
-    .safeParse({
-      pct: str(f, "pct"),
-      capUsd: str(f, "capUsd"),
-      minDepositUsd: str(f, "minDepositUsd"),
-    });
-  if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
-  const value = { ...parsed.data, enabled: f.get("enabled") === "on" };
-  return run(async () => {
-    await connectDb();
-    await Setting.updateOne(
-      { key: "referral" },
-      { key: "referral", value },
-      { upsert: true },
-    );
-    await audit(admin, "settings.referral", "referral", value);
-    return value.enabled
-      ? "Referral programme saved."
-      : "Referral programme paused.";
-  }, "/admin/settings");
-}
-
-/* ---------- Activity ticker ---------- */
-export async function saveActivityTickerAction(
-  _: ActionState,
-  f: FormData,
-): Promise<ActionState> {
-  const admin = await requireAdmin();
-  const enabled = f.get("enabled") === "on";
-  return run(async () => {
-    await connectDb();
-    await Setting.updateOne(
-      { key: "activity_ticker" },
-      { key: "activity_ticker", value: { enabled } },
-      { upsert: true },
-    );
-    clearActivityCache();
-    await audit(admin, "settings.activity_ticker", String(enabled));
-    return enabled ? "Activity ticker is on." : "Activity ticker is off.";
-  }, "/admin/settings");
 }
 
 /* ---------- Online payments ---------- */

@@ -24,8 +24,12 @@ export function AuthTerms({ risk = false }: { risk?: boolean }) {
       {risk && (
         <>
           , and acknowledge the{" "}
+          <Link href="/refunds" className={authLink}>
+            Refund policy
+          </Link>{" "}
+          and{" "}
           <Link href="/risk" className={authLink}>
-            Risk Disclosure
+            crypto payment risks
           </Link>
         </>
       )}

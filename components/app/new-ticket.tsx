@@ -19,8 +19,15 @@ import { TICKET_CATEGORIES } from "@/lib/services/ticket-categories";
 import { ActionForm, Field, SubmitButton, TextField } from "./form";
 import { IconSelect } from "./icon-input";
 
-export function NewTicketDialog({ trigger }: { trigger: React.ReactNode }) {
-  const [open, setOpen] = useState(false);
+export function NewTicketDialog({
+  trigger,
+  order,
+}: {
+  trigger: React.ReactNode;
+  /** When set, the ticket is about this order and the dialog opens ready to fill in. */
+  order?: { id: string; number: string };
+}) {
+  const [open, setOpen] = useState(Boolean(order));
   const router = useRouter();
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -40,12 +47,13 @@ export function NewTicketDialog({ trigger }: { trigger: React.ReactNode }) {
             router.refresh();
           }}
         >
+          {order && <input type="hidden" name="orderId" value={order.id} />}
           <Field label="Topic" htmlFor="category">
             <IconSelect
               id="category"
               name="category"
               icon={Tag}
-              defaultValue="deposit"
+              defaultValue={order ? "order" : "account"}
             >
               {TICKET_CATEGORIES.map((c) => (
                 <option key={c.value} value={c.value}>
@@ -58,7 +66,8 @@ export function NewTicketDialog({ trigger }: { trigger: React.ReactNode }) {
             name="subject"
             icon={Type}
             label="Subject"
-            placeholder="e.g. My deposit has not been credited"
+            defaultValue={order ? `Order ${order.number}` : undefined}
+            placeholder="e.g. My airtime has not arrived"
             required
             maxLength={120}
             autoComplete="off"

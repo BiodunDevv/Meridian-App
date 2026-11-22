@@ -3,14 +3,7 @@ import { Types } from "mongoose";
 import { connectDb } from "../db";
 import { sendEmail } from "../email/brevo";
 import { emails } from "../email/templates";
-import {
-  Deposit,
-  Investment,
-  Kyc,
-  Message,
-  Notification,
-  User,
-} from "../models";
+import { Deposit, Kyc, Message, Notification, User } from "../models";
 import { type AudienceKey, audienceLabel, AUDIENCES } from "./audiences";
 import { audit } from "./notify";
 import { sendPush } from "./push";
@@ -77,11 +70,6 @@ export async function resolveAudience(
     case "unfunded":
       filter._id = {
         $nin: await ids(Deposit.distinct("userId", { status: "approved" })),
-      };
-      break;
-    case "investing":
-      filter._id = {
-        $in: await ids(Investment.distinct("userId", { status: "active" })),
       };
       break;
     case "no_mfa":
